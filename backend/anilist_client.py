@@ -227,28 +227,27 @@ class AnilistClient:
     ) -> Dict:
         """Execute a GraphQL query with rate limiting."""
         await self.rate_limiter.acquire()
-        try:
-            response = await self._client.post(
-                self.base_url,
-                json={"query": query, "variables": variables},
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-            )
+        response = await self._client.post(
+            self.base_url,
+            json={"query": query, "variables": variables},
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
 
-            # Handle 429 rate limit before parsing JSON
-            if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 60))
-                logger.warning("Rate limited (429). Waiting %ds...", retry_after)
-                await asyncio.sleep(retry_after)
-                return await self._graphql_request(query, variables)
+        # Handle 429 rate limit before parsing JSON
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 60))
+            logger.warning("Rate limited (429). Waiting %ds...", retry_after)
+            await asyncio.sleep(retry_after)
+            return await self._graphql_request(query, variables)
 
-            response.raise_for_status()
-            data = response.json()
+        response.raise_for_status()
+        data = response.json()
 
-            if "errors" in data:
-                error_msg = data["errors"][0].get("message", "Unknown AniList error")
-                raise Exception(f"AniList API error: {error_msg}")
+        if "errors" in data:
+            error_msg = data["errors"][0].get("message", "Unknown AniList error")
+            raise Exception(f"AniList API error: {error_msg}")
 
-            return data["data"]
+        return data["data"]
 
     async def fetch_user_anime_list(
         self, username: str
