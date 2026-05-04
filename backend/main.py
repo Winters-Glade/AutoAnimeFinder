@@ -22,8 +22,10 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 from models import (
     AnilistFetchRequest,
@@ -60,7 +62,7 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 
 app = FastAPI(
-    title="Anime Soul Whisper — Recommendation Engine",
+    title="AutoAnimeFinder — Recommendation Engine",
     description="AI-powered anime recommendation engine with taste profiling",
     version="1.0.0",
 )
@@ -71,6 +73,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ──────────────────────────────────────────────
+# Serve built frontend as static files
+# ──────────────────────────────────────────────
+
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+FRONTEND_INDEX = os.path.join(FRONTEND_DIST, "index.html")
+
+# Serve assets (JS, CSS, images) from the built frontend
+ASSETS_DIR = os.path.join(FRONTEND_DIST, "assets")
+if os.path.isdir(ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="frontend_assets")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    fpath = os.path.join(FRONTEND_DIST, "favicon.svg")
+    if os.path.isfile(fpath):
+        return FileResponse(fpath, media_type="image/svg+xml")
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
 
 # ──────────────────────────────────────────────
 # Cache directory
@@ -577,6 +600,19 @@ async def get_search_history_entry(entry_id: int):
             return SearchHistoryEntry(**e)
     raise HTTPException(status_code=404, detail=f"Search history entry #{entry_id} not found")
 
+
+# ──────────────────────────────────────────────
+# SPA catch-all — serve index.html for all non-API paths
+# ──────────────────────────────────────────────
+
+if os.path.isfile(FRONTEND_INDEX):
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        # Don't catch /api/ paths — let them return proper 404
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return FileResponse(FRONTEND_INDEX)
 
 # ──────────────────────────────────────────────
 # Entry point
