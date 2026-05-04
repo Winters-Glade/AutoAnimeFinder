@@ -212,12 +212,12 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 mt-auto pt-3 border-t border-[#1e1e2e]">
+          <div className="flex items-center justify-center gap-2 mt-auto pt-3 border-t border-[#1e1e2e] flex-wrap">
             <a
               href={`https://anilist.co/anime/${a.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all text-center"
+              className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all whitespace-nowrap"
               title="View on AniList"
             >
               ▲ AniList
@@ -228,7 +228,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
                 href={`https://myanimelist.net/anime/${a.idMal}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all text-center"
+                className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all whitespace-nowrap"
                 title="View on MyAnimeList"
               >
                 ● MAL
@@ -236,13 +236,13 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
             )}
             <button
               onClick={() => onDismiss?.(a.id)}
-              className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-pink-400 hover:border-pink-500/40 transition-all"
+              className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-pink-400 hover:border-pink-500/40 transition-all whitespace-nowrap"
             >
               ✕ Dismiss
             </button>
             <button
               onClick={() => genreNames.forEach(g => onAvoid?.(g))}
-              className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
+              className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-blue-400 hover:border-blue-500/40 transition-all whitespace-nowrap"
             >
               ⊘ Avoid
             </button>
