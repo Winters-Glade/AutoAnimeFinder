@@ -50,7 +50,7 @@ export default function HomePage() {
     }
   }
 
-  const excludeList = [...new Set([...watchedIds, ...dismissedIds])]
+  const excludeList = [...new Set([...watchedIds, ...dismissedIds].filter(id => id != null && !isNaN(id)))]
 
   const handleMoodRec = async (filters) => {
     setLoading(true)
@@ -87,8 +87,11 @@ export default function HomePage() {
   }
 
   const handleDismiss = (id) => {
-    setDismissedIds(prev => new Set([...prev, id]))
-    setRecommendations(prev => prev.filter(r => r.id !== id))
+    if (id == null) return
+    const numId = Number(id)
+    if (isNaN(numId)) return
+    setDismissedIds(prev => new Set([...prev, numId]))
+    setRecommendations(prev => prev.filter(r => (r.anime?.id ?? r.id) !== numId))
   }
 
   const handleAvoid = (genre) => {
@@ -153,7 +156,7 @@ export default function HomePage() {
 
         {error && (
           <div className="max-w-xl mx-auto mb-6 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm text-center">
-            ⚠️ {error}
+            ⚠️ {typeof error === 'string' ? error : 'An unexpected error occurred'}
           </div>
         )}
 
@@ -204,9 +207,9 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredResults.map((anime) => (
                     <AnimeCard
-                      key={anime.id}
+                      key={anime.anime?.id ?? anime.id}
                       anime={anime}
-                      onDismiss={() => handleDismiss(anime.id)}
+                      onDismiss={(id) => handleDismiss(id)}
                       onAvoid={handleAvoid}
                     />
                   ))}
