@@ -640,6 +640,7 @@ async def get_auto_recommendations(request: dict = {}):
     username = request.get("username", "")
     source = request.get("source", "anilist")
     seed_count = request.get("seedCount", 5)
+    limit = request.get("limit", 20)
 
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
@@ -684,6 +685,7 @@ async def get_auto_recommendations(request: dict = {}):
             user_anime_list,
             all_anime,
             seed_count=seed_count,
+            limit=limit,
         )
     except Exception as e:
         logger.error("Auto recommendation failed: %s", e)
