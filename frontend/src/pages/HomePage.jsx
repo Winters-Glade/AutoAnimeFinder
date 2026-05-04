@@ -21,6 +21,7 @@ export default function HomePage() {
   const [history, setHistory] = useState([])
   const [avoidList, setAvoidList] = useState([])
   const [dismissedIds, setDismissedIds] = useState(new Set())
+  const [watchedIds, setWatchedIds] = useState(new Set()) // anime the user has already seen
 
   useEffect(() => { loadHistory() }, [])
 
@@ -29,7 +30,16 @@ export default function HomePage() {
     setProfileLoading(true)
     setError(null)
     try {
-      await fetchAnilist(username)
+      const data = await fetchAnilist(username)
+      // Track which anime the user has already seen (exclude from recs)
+      const animeList = data?.anime ?? []
+      const seen = new Set(
+        animeList
+          .filter(a => a.status !== 'PLANNING' && a.status !== 'planning' && a.status !== undefined)
+          .map(a => a.id)
+          .filter(Boolean)
+      )
+      setWatchedIds(seen)
       const profile = await fetchTasteProfile(username, source)
       setTasteProfile(profile)
     } catch (e) {
@@ -39,11 +49,13 @@ export default function HomePage() {
     }
   }
 
+  const excludeList = [...new Set([...watchedIds, ...dismissedIds])]
+
   const handleMoodRec = async (filters) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getMoodRecs({ username, source, ...filters })
+      const data = await getMoodRecs({ username, source, excludeList, ...filters })
       const results = data?.recommendations ?? data ?? []
       if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
@@ -60,7 +72,7 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await getDirectRecs({ username, source, ...filters })
+      const data = await getDirectRecs({ username, source, excludeList, ...filters })
       const results = data?.recommendations ?? data ?? []
       if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
