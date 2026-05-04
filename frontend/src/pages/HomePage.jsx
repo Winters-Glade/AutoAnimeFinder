@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react'
 import Header from '../components/Header'
+import AutoMode from '../components/AutoMode'
 import MoodTranslator from '../components/MoodTranslator'
 import DirectMode from '../components/DirectMode'
 import TasteProfile from '../components/TasteProfile'
 import SearchHistory from '../components/SearchHistory'
 import AnimeCard from '../components/AnimeCard'
 import NeuralLoader from '../components/NeuralLoader'
-import { fetchAnilist, fetchTasteProfile, getMoodRecs, getDirectRecs,
+import { fetchAnilist, fetchTasteProfile, getAutoRecs, getMoodRecs, getDirectRecs,
          getSearchHistory, saveSearchHistory } from '../api/client'
 
 export default function HomePage() {
   const [username, setUsername] = useState('')
   const [source, setSource] = useState('anilist')
-  const [activeTab, setActiveTab] = useState('mood')
+  const [activeTab, setActiveTab] = useState('auto')
   const [tasteProfile, setTasteProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [recommendations, setRecommendations] = useState([])
@@ -226,7 +227,17 @@ export default function HomePage() {
         )}
 
         {/* Tab Switcher */}
-        <div className="flex gap-2 mb-6 justify-center">
+        <div className="flex gap-2 mb-6 justify-center flex-wrap">
+          <button
+            onClick={() => setActiveTab('auto')}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'auto'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/30'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+            }`}
+          >
+            ⚡ Auto
+          </button>
           <button
             onClick={() => setActiveTab('mood')}
             className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -253,7 +264,19 @@ export default function HomePage() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column */}
           <div className="flex-1 min-w-0">
-            {activeTab === 'mood' ? (
+            {activeTab === 'auto' ? (
+              <AutoMode
+                username={username}
+                source={source}
+                recommendations={recommendations}
+                loading={loading}
+                error={error}
+                watchedIds={watchedIds}
+                episodeMap={episodeMap}
+                onDismiss={(id) => handleDismiss(id)}
+                onAvoid={handleAvoid}
+              />
+            ) : activeTab === 'mood' ? (
               <MoodTranslator onRecommend={handleMoodRec} loading={loading} avoidList={avoidList} />
             ) : (
               <DirectMode onRecommend={handleDirectRec} loading={loading} avoidList={avoidList} />
