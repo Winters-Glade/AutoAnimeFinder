@@ -43,7 +43,9 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const results = await getMoodRecs({ username, source, ...filters })
+      const data = await getMoodRecs({ username, source, ...filters })
+      const results = data?.recommendations ?? data ?? []
+      if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
       await saveSearchHistory({ query: filters.moodQuery || '(mood)', type: 'mood', filters })
       loadHistory()
@@ -58,7 +60,9 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const results = await getDirectRecs({ username, source, ...filters })
+      const data = await getDirectRecs({ username, source, ...filters })
+      const results = data?.recommendations ?? data ?? []
+      if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
       await saveSearchHistory({ query: `Direct: ${(filters.genres || []).join(', ')}`, type: 'direct', filters })
       loadHistory()
@@ -91,7 +95,7 @@ export default function HomePage() {
     else if (search.type === 'direct' && search.filters) handleDirectRec(search.filters)
   }
 
-  const filteredResults = recommendations.filter(r => !dismissedIds.has(r.id))
+  const filteredResults = Array.isArray(recommendations) ? recommendations.filter(r => !dismissedIds.has(r.id)) : []
 
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white">
