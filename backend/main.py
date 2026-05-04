@@ -275,6 +275,10 @@ async def fetch_anilist(request: AnilistFetchRequest):
     cached = _load_cache(cache_key, max_age_secs=300)  # 5 min cache
     if cached:
         logger.info("Returning cached AniList data for %s", username)
+        # Repopulate the in-memory catalog from cached data
+        for ua in cached.get("animeList", []):
+            anime = Anime(**ua.get("anime", ua))
+            _anime_catalog[anime.id] = anime
         return AnimeListResponse(**cached)
 
     try:
@@ -369,6 +373,9 @@ async def get_taste_profile(
     if cached:
         # Parse cached UserAnime list
         user_anime_list = [UserAnime(**ua) for ua in cached.get("animeList", [])]
+        # Repopulate the in-memory catalog from cached data
+        for ua in user_anime_list:
+            _anime_catalog[ua.anime.id] = ua.anime
     else:
         # Fetch fresh data
         try:
