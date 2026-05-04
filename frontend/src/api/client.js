@@ -36,6 +36,10 @@ export function fetchTasteProfile(username, source = 'anilist') {
 }
 
 // --- Recommendations ---
+export function getAutoRecs(payload) {
+  return request('/api/recommendations/auto', { method: 'POST', body: JSON.stringify(payload) })
+}
+
 export function getMoodRecs(payload) {
   return request('/api/recommendations/mood', { method: 'POST', body: JSON.stringify(payload) })
 }
