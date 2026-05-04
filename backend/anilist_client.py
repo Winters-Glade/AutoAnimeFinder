@@ -52,6 +52,7 @@ query ($username: String, $page: Int, $perPage: Int) {
       completedAt { year month day }
       media {
         id
+        idMal
         title { romaji english native }
         genres
         tags {
@@ -348,6 +349,7 @@ class AnilistClient:
 
         return Anime(
             id=media["id"],
+            idMal=media.get("idMal"),
             title=media.get("title", {}),
             genres=media.get("genres", []),
             tags=[{

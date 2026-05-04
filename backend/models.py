@@ -161,6 +161,7 @@ class CoverImage(BaseModel):
 class Anime(BaseModel):
     """Full anime metadata model."""
     id: int
+    idMal: Optional[int] = None
     title: AnimeTitle
     genres: List[str] = Field(default_factory=list)
     tags: List[Tag] = Field(default_factory=list)
@@ -293,6 +294,7 @@ class MoodRecommendationRequest(BaseModel):
 
 class DirectRecommendationRequest(BaseModel):
     """Direct filter-based recommendation request (no AI mood)."""
+    username: Optional[str] = ""
     genres: List[str] = Field(default_factory=list)
     timeCommitment: Optional[TimeCommitment] = None
     brainPower: Optional[int] = Field(default=50, ge=1, le=100)

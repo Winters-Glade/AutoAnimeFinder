@@ -45,6 +45,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
   const data = anime?.anime ?? anime ?? {}
   const a = {
     id: data.id ?? anime?.id,
+    idMal: data.idMal ?? anime?.idMal,
     title: data.title ?? anime?.title,
     genres: data.genres ?? anime?.genres ?? [],
     tags: data.tags ?? anime?.tags ?? [],
@@ -166,6 +167,26 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
 
           {/* Actions */}
           <div className="flex gap-2 mt-auto pt-3 border-t border-[#1e1e2e]">
+            <a
+              href={`https://anilist.co/anime/${a.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all text-center"
+              title="View on AniList"
+            >
+              ▲ AniList
+            </a>
+            {a.idMal && (
+              <a
+                href={`https://myanimelist.net/anime/${a.idMal}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all text-center"
+                title="View on MyAnimeList"
+              >
+                ● MAL
+              </a>
+            )}
             <button
               onClick={() => onDismiss?.(a.id)}
               className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-pink-400 hover:border-pink-500/40 transition-all"

@@ -118,5 +118,107 @@
     },
     "results": [],
     "created_at": "2026-05-04T14:02:23.073831"
+  },
+  {
+    "id": 9,
+    "username": "",
+    "query": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+    "filters": {
+      "moodQuery": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+      "brainPower": 50,
+      "timeCommitment": "commitment",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:10:51.267651"
+  },
+  {
+    "id": 10,
+    "username": "",
+    "query": "Direct: Slice of Life",
+    "filters": {
+      "genres": [
+        "Slice of Life"
+      ],
+      "brainPower": 50,
+      "timeCommitment": "commitment",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:11:41.623818"
+  },
+  {
+    "id": 11,
+    "username": "",
+    "query": "Direct: Slice of Life",
+    "filters": {
+      "genres": [
+        "Slice of Life"
+      ],
+      "brainPower": 50,
+      "timeCommitment": "session",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:12:12.747613"
+  },
+  {
+    "id": 12,
+    "username": "",
+    "query": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+    "filters": {
+      "moodQuery": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+      "brainPower": 50,
+      "timeCommitment": "commitment",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:31:41.143812"
+  },
+  {
+    "id": 13,
+    "username": "",
+    "query": "fun slice-of-life school anime from the 2000s slow life",
+    "filters": {
+      "moodQuery": "fun slice-of-life school anime from the 2000s slow life",
+      "brainPower": 50,
+      "timeCommitment": "session",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:32:34.412982"
+  },
+  {
+    "id": 14,
+    "username": "",
+    "query": "Direct: Slice of Life",
+    "filters": {
+      "genres": [
+        "Slice of Life"
+      ],
+      "brainPower": 50,
+      "timeCommitment": "session",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T14:39:16.716229"
   }
 ]

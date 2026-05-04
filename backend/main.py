@@ -20,7 +20,7 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,6 +146,32 @@ def _user_anime_to_cache_dict(ua: UserAnime) -> dict:
     return json.loads(ua.model_dump_json())
 
 
+def _get_watched_ids_from_cache(username: str, source: str) -> Set[int]:
+    """
+    Look up the cached user anime list and return a set of anime IDs
+    that the user has already watched (status != PLANNING).
+
+    Uses normalized username (lowercase, no hyphens) for cache key,
+    matching the fetch endpoint's convention.
+
+    Returns an empty set if no cache is found.
+    """
+    cache_username = username.lower().replace("-", "")
+    cache_key = f"{source}_user_{cache_username}"
+    cached = _load_cache(cache_key, max_age_secs=3600)
+    if not cached:
+        return set()
+    anime_list = cached.get("animeList", [])
+    watched_ids = set()
+    for ua in anime_list:
+        status = ua.get("status", "")
+        if status.upper() != "PLANNING":
+            anime_id = ua.get("anime", {}).get("id")
+            if anime_id:
+                watched_ids.add(int(anime_id))
+    return watched_ids
+
+
 # ──────────────────────────────────────────────
 # Search history helpers
 # ──────────────────────────────────────────────
@@ -243,7 +269,9 @@ async def fetch_anilist(request: AnilistFetchRequest):
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
-    cache_key = f"anilist_user_{username}"
+    # Normalize username for cache key (lowercase, no hyphens)
+    cache_username = username.lower().replace("-", "")
+    cache_key = f"anilist_user_{cache_username}"
     cached = _load_cache(cache_key, max_age_secs=300)  # 5 min cache
     if cached:
         logger.info("Returning cached AniList data for %s", username)
@@ -269,16 +297,7 @@ async def fetch_anilist(request: AnilistFetchRequest):
     )
 
     # Cache the response
-    _save_cache(
-        cache_key,
-        {
-            "username": username,
-            "source": "anilist",
-            "animeList": [_user_anime_to_cache_dict(ua) for ua in user_anime_list],
-            "totalCount": len(user_anime_list),
-            "fetchedAt": datetime.utcnow().isoformat(),
-        },
-    )
+    _save_cache(cache_key, json.loads(response.model_dump_json()))
 
     return response
 
@@ -428,6 +447,18 @@ async def get_anime_details(anime_id: int):
 @app.post("/api/recommendations/mood", response_model=RecommendationResponse)
 async def get_mood_recommendations(request: MoodRecommendationRequest):
     """Get AI-powered mood-based anime recommendations."""
+    # ── Auto-filter: merge watched anime into excludeList ──
+    exclude_list = list(request.excludeList or [])
+    if request.username:
+        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        if watched:
+            exclude_list = list(set(exclude_list) | watched)
+            logger.debug(
+                "Auto-filter: added %d watched IDs to excludeList for user '%s'",
+                len(watched),
+                request.username,
+            )
+
     # Build the candidate pool from the catalog
     all_anime = _get_all_anime_from_catalog()
     if not all_anime:
@@ -442,7 +473,7 @@ async def get_mood_recommendations(request: MoodRecommendationRequest):
         "timeCommitment": request.timeCommitment,
         "moodIntent": request.moodIntent,
         "avoidList": request.avoidList or [],
-        "excludeList": request.excludeList or [],
+        "excludeList": exclude_list,
     }
 
     try:
@@ -468,6 +499,18 @@ async def get_mood_recommendations(request: MoodRecommendationRequest):
 @app.post("/api/recommendations/direct", response_model=RecommendationResponse)
 async def get_direct_recommendations(request: DirectRecommendationRequest):
     """Get filter-based anime recommendations (no AI mood)."""
+    # ── Auto-filter: merge watched anime into excludeList ──
+    exclude_list = list(request.excludeList or [])
+    if request.username:
+        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        if watched:
+            exclude_list = list(set(exclude_list) | watched)
+            logger.debug(
+                "Auto-filter: added %d watched IDs to excludeList for user '%s'",
+                len(watched),
+                request.username,
+            )
+
     all_anime = _get_all_anime_from_catalog()
     if not all_anime:
         raise HTTPException(
@@ -481,7 +524,7 @@ async def get_direct_recommendations(request: DirectRecommendationRequest):
         "brainPower": request.brainPower,
         "mood": request.mood,
         "avoidList": request.avoidList or [],
-        "excludeList": request.excludeList or [],
+        "excludeList": exclude_list,
         "limit": request.limit,
     }
 

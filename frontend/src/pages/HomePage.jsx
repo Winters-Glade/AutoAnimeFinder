@@ -32,7 +32,7 @@ export default function HomePage() {
     try {
       const data = await fetchAnilist(username)
       // Track which anime the user has already seen (exclude from recs)
-      const animeList = data?.anime ?? []
+      const animeList = data?.animeList ?? data?.anime ?? []
       const seen = new Set(
         animeList
           .filter(a => a.status !== 'PLANNING' && a.status !== 'planning')

@@ -11,4 +11,4 @@ echo "     - Web Service: FastAPI backend (docker run -p 8000:8000 -e PORT=8000 
 echo "     - Static Site: Frontend dist/ folder"
 echo "  3. Or use render.yaml blueprint (see references/render-deploy.md)"
 echo ""
-echo "Or run locally: animesoul start"
+echo "Or run locally: auto-anime-finder start"

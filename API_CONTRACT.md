@@ -1,4 +1,4 @@
-# anime-soul-whisper — API Contract
+# AutoAnimeFinder — API Contract
 
 > **Project**: AI-powered anime recommendation engine
 > **Base URL**: `http://localhost:8000`
