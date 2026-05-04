@@ -698,6 +698,42 @@ async def get_auto_recommendations(request: dict = {}):
     )
 
 
+# ── Similar Recommendations (If You Liked...) ──────
+
+
+@app.post("/api/recommendations/similar", response_model=RecommendationResponse)
+async def get_similar_recommendations(request: dict = {}):
+    """Find anime similar to given seed IDs using genre/tag profile."""
+    seed_ids = request.get("seedIds", [])
+    limit = request.get("limit", 20)
+
+    if not seed_ids:
+        raise HTTPException(status_code=400, detail="At least one seed anime ID is required")
+    if len(seed_ids) > 5:
+        seed_ids = seed_ids[:5]
+
+    all_anime = _get_all_anime_from_catalog()
+    if not all_anime:
+        raise HTTPException(status_code=404, detail="No anime catalog available")
+
+    found_ids = {a.id for a in all_anime if a.id in seed_ids}
+    if not found_ids:
+        raise HTTPException(status_code=404, detail="No seed anime found in catalog")
+
+    from recommender import similar_recommend
+    recommendations = await similar_recommend(
+        all_anime=all_anime,
+        seed_ids=found_ids,
+        limit=limit,
+    )
+
+    return RecommendationResponse(
+        recommendations=recommendations,
+        source="similar",
+        totalMatches=len(recommendations),
+    )
+
+
 # ── Search History ─────────────────────────────
 
 

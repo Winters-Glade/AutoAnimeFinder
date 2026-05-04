@@ -744,3 +744,60 @@ async def auto_recommend(
         )
 
     return recommendations
+
+
+async def similar_recommend(
+    all_anime: List[Anime],
+    seed_ids: Set[int],
+    limit: int = 20,
+) -> List[Recommendation]:
+    """Find anime similar to given seed IDs using weighted genre/tag profile."""
+    if not seed_ids:
+        return []
+
+    seed_anime = [a for a in all_anime if a.id in seed_ids]
+    if not seed_anime:
+        return []
+
+    from collections import Counter
+    genre_counts: Counter = Counter()
+    tag_counts: Counter = Counter()
+
+    for anime in seed_anime:
+        for g in (anime.genres or []):
+            genre_counts[g.lower()] += 1
+        for t in (anime.tags or []):
+            name = t.name.lower() if hasattr(t, "name") else t.lower()
+            tag_counts[name] += 1
+
+    max_genre = max(genre_counts.values()) if genre_counts else 1
+    max_tag = max(tag_counts.values()) if tag_counts else 1
+    genre_weights = {g: c / max_genre for g, c in genre_counts.items()}
+    tag_weights = {t: c / max_tag for t, c in tag_counts.items()}
+
+    seed_titles = [
+        a.title.romaji or a.title.english or f"#{a.id}"
+        for a in seed_anime
+    ]
+    reason = f"If you liked {', '.join(seed_titles[:3])}"
+
+    scored: List[Tuple[float, Anime]] = []
+    for anime in all_anime:
+        if anime.id in seed_ids:
+            continue
+        g_score = sum(genre_weights.get(g.lower(), 0) for g in (anime.genres or []))
+        t_score = sum(
+            tag_weights.get(t.name.lower() if hasattr(t, "name") else t.lower(), 0)
+            for t in (anime.tags or [])
+        )
+        n_g = len(anime.genres or []) or 1
+        n_t = len(anime.tags or []) or 1
+        combined = (g_score / n_g) * 0.7 + (t_score / n_t) * 0.3
+        if combined > 0:
+            scored.append((combined, anime))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [
+        Recommendation(anime=a, matchScore=round(s, 4), matchReason=reason)
+        for s, a in scored[:limit]
+    ]
