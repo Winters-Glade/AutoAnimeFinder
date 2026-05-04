@@ -8,7 +8,7 @@ import TasteProfile from '../components/TasteProfile'
 import SearchHistory from '../components/SearchHistory'
 import AnimeCard from '../components/AnimeCard'
 import NeuralLoader from '../components/NeuralLoader'
-import { fetchAnilist, fetchTasteProfile, getAutoRecs, getSimilarRecs, getMoodRecs, getDirectRecs,
+import { fetchAnilist, fetchJikan, fetchTasteProfile, getAutoRecs, getSimilarRecs, getMoodRecs, getDirectRecs,
          getSearchHistory, saveSearchHistory } from '../api/client'
 
 export default function HomePage() {
@@ -69,7 +69,7 @@ export default function HomePage() {
     setProfileLoading(true)
     setError(null)
     try {
-      const data = await fetchAnilist(name)
+      const data = source === 'mal' ? await fetchJikan(name) : await fetchAnilist(name)
       const animeList = data?.animeList ?? data?.anime ?? []
       const seen = new Set(
         animeList
