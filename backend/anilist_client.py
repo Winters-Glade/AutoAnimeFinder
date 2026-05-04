@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 ANILIST_API_URL = "https://graphql.anilist.co"
 MAX_REQUESTS_PER_MINUTE = 90
 REQUESTS_INTERVAL = 60.0 / MAX_REQUESTS_PER_MINUTE  # ~0.67s between requests
+
+# In-memory cache TTL for GraphQL responses (in seconds)
+CACHE_TTL = 300  # 5 minutes
 PAGE_SIZE = 50
 
 # ──────────────────────────────────────────────
@@ -218,6 +221,7 @@ class AnilistClient:
         self.base_url = ANILIST_API_URL
         self.rate_limiter = RateLimiter()
         self._client = httpx.AsyncClient(timeout=timeout)
+        self._cache: Dict[str, Tuple[float, Dict]] = {}  # key → (expiry, result)
 
     async def close(self):
         await self._client.aclose()
@@ -225,7 +229,18 @@ class AnilistClient:
     async def _graphql_request(
         self, query: str, variables: Dict
     ) -> Dict:
-        """Execute a GraphQL query with rate limiting."""
+        """Execute a GraphQL query with rate limiting, caching, and retry."""
+        # Build a cache key from the query and variables
+        cache_key = f"{hash(query)}:{hash(frozenset(variables.items()))}"
+        now = time.monotonic()
+
+        # Check in-memory cache
+        if cache_key in self._cache:
+            expiry, result = self._cache[cache_key]
+            if now < expiry:
+                logger.debug("AniList cache hit")
+                return result
+
         await self.rate_limiter.acquire()
 
         # Retry loop for transient server errors
@@ -262,7 +277,10 @@ class AnilistClient:
                     error_msg = data["errors"][0].get("message", "Unknown AniList error")
                     raise Exception(f"AniList API error: {error_msg}")
 
-                return data["data"]
+                # Cache the successful response
+                result = data["data"]
+                self._cache[cache_key] = (time.monotonic() + CACHE_TTL, result)
+                return result
 
             except (httpx.TimeoutException, httpx.NetworkError) as e:
                 if attempt < max_retries - 1:
