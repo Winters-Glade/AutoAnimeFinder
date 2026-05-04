@@ -69,11 +69,29 @@ class JikanClient:
         all_entries: List[UserAnime] = []
         page = 1
         has_next = True
+        max_404_retries = 3
 
         while has_next:
-            anime_data = await self._rate_limited_get(
-                f"/users/{username}/animelist?page={page}"
-            )
+            # Jikan has a known caching issue where /animelist returns 404
+            # for valid users. Retry with exponential backoff.
+            for attempt in range(max_404_retries):
+                try:
+                    anime_data = await self._rate_limited_get(
+                        f"/users/{username}/animelist?page={page}"
+                    )
+                    break  # Success
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 404 and attempt < max_404_retries - 1:
+                        wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                        logger.warning(
+                            "Jikan animelist 404 on page %d (attempt %d/%d). "
+                            "Waiting %ds before retry...",
+                            page, attempt + 1, max_404_retries, wait
+                        )
+                        await asyncio.sleep(wait)
+                    else:
+                        raise  # Non-404 or exhausted retries
+
             entries = anime_data.get("data", [])
             for entry in entries:
                 user_anime = self._parse_entry(entry)
