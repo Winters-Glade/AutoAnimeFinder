@@ -35,10 +35,11 @@ export default function HomePage() {
       const animeList = data?.anime ?? []
       const seen = new Set(
         animeList
-          .filter(a => a.status !== 'PLANNING' && a.status !== 'planning' && a.status !== undefined)
-          .map(a => a.id)
+          .filter(a => a.status !== 'PLANNING' && a.status !== 'planning')
+          .map(a => a.anime?.id ?? a.mediaId ?? a.media_id)
           .filter(Boolean)
       )
+      console.log('Excluding', seen.size, 'watched anime from recommendations')
       setWatchedIds(seen)
       const profile = await fetchTasteProfile(username, source)
       setTasteProfile(profile)
