@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import AnimeCard from './AnimeCard'
 import NeuralLoader from './NeuralLoader'
-import { getSimilarRecs, fetchAnilist } from '../api/client'
+import { getSimilarRecs } from '../api/client'
 
 export default function SimilarMode({ username, source, watchedIds, episodeMap,
                                        onDismiss, onAvoid }) {
@@ -14,25 +14,32 @@ export default function SimilarMode({ username, source, watchedIds, episodeMap,
   const [searching, setSearching] = useState(false)
   const [fetched, setFetched] = useState(false)
 
-  // Search anime as user types
-  const handleSearch = useCallback(async (query) => {
+  const debounceRef = useRef(null)
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
+
+  // Search anime as user types (debounced 300ms)
+  const handleSearch = (query) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!query || query.length < 2) {
       setSearchResults([])
       return
     }
-    setSearching(true)
-    try {
-      const data = await getSimilarRecs({ search: query, limit: 10 })
-      // Use a simple fetch approach — search the catalog
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=1`)
-      const json = await res.json()
-      setSearchResults(json.results || json.anime || [])
-    } catch (e) {
-      setSearchResults([])
-    } finally {
-      setSearching(false)
-    }
-  }, [])
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`)
+        const json = await res.json()
+        setSearchResults(json.results || json.anime || [])
+      } catch (e) {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+  }
 
   const addSeed = (anime) => {
     if (seeds.length >= 5) return
