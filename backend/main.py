@@ -23,6 +23,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 
+import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -285,6 +286,14 @@ async def fetch_anilist(request: AnilistFetchRequest):
     try:
         client = get_anilist_client()
         user_anime_list = await client.fetch_user_anime_list(username)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User '{username}' not found on AniList, or their anime list is private"
+            )
+        logger.error("AniList fetch failed for %s: %s", username, e)
+        raise HTTPException(status_code=502, detail=f"AniList API error: {e}")
     except Exception as e:
         logger.error("AniList fetch failed for %s: %s", username, e)
         raise HTTPException(status_code=502, detail=f"AniList API error: {e}")
@@ -326,6 +335,14 @@ async def fetch_jikan(request: JikanFetchRequest):
     try:
         client = get_jikan_client()
         user_anime_list = await client.fetch_user_anime_list(username)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User '{username}' not found on MyAnimeList, or their anime list is private"
+            )
+        logger.error("Jikan fetch failed for %s: %s", username, e)
+        raise HTTPException(status_code=502, detail=f"Jikan API error: {e}")
     except Exception as e:
         logger.error("Jikan fetch failed for %s: %s", username, e)
         raise HTTPException(status_code=502, detail=f"Jikan API error: {e}")
