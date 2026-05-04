@@ -125,70 +125,115 @@ class JikanClient:
         """Fallback: fetch anime list directly from MAL's internal JSON endpoint.
         
         Used when Jikan's animelist cache is broken (returns 404 for valid users).
+        The MAL endpoint paginates at 300 entries per request.
         """
-        url = f"https://myanimelist.net/animelist/{username}/load.json?status=7&offset=0"
-        logger.info("Fetching MAL data directly from: %s", url)
-
-        response = await self._client.get(url)
-        if response.status_code != 200:
-            logger.error("MAL direct fetch failed: HTTP %d", response.status_code)
-            response.raise_for_status()
-
-        raw_entries = response.json()
-        if not isinstance(raw_entries, list):
-            logger.error("MAL direct fetch: unexpected response format")
-            raise ValueError("Unexpected response format from MAL direct endpoint")
-
-        # Transform MAL JSON format to match Jikan's flat entry format
-        # so _parse_entry can handle it.
-        STATUS_MAP = {
-            1: "watching",
-            2: "completed",
-            3: "on_hold",
-            4: "dropped",
-            6: "plan_to_watch",
-        }
-
         all_entries: List[UserAnime] = []
-        for raw in raw_entries:
-            try:
-                # Build a Jikan-compatible entry dict
-                entry = {
-                    "mal_id": raw.get("anime_id", 0),
-                    "title": raw.get("anime_title", ""),
-                    "title_english": raw.get("anime_title_eng", ""),
-                    "title_japanese": raw.get("anime_title_jp", ""),
-                    "episodes": raw.get("anime_num_episodes", 0),
-                    "score": raw.get("score", 0),
-                    "episodes_watched": raw.get("num_watched_episodes", 0),
-                    "watching_status": raw.get("status", 1),
-                    "genres": raw.get("genres", []),
-                    "demographics": raw.get("demographics", []),
-                    "synopsis": raw.get("anime_synopsis", ""),
-                    "url": f"https://myanimelist.net/anime/{raw.get('anime_id', 0)}",
-                    "images": {
-                        "jpg": {
-                            "image_url": raw.get("anime_image_path", ""),
-                        },
-                    },
-                    "titles": [
-                        {"type": "Default", "title": raw.get("anime_title", "")},
-                    ],
-                }
-                # Add English title to titles array if different
-                eng_title = raw.get("anime_title_eng", "")
-                if eng_title and eng_title != raw.get("anime_title", ""):
-                    entry["titles"].append({"type": "English", "title": eng_title})
+        offset = 0
+        limit_per_page = 300
+        page = 1
 
-                user_anime = self._parse_entry(entry)
-                if user_anime:
-                    all_entries.append(user_anime)
-            except Exception as e:
-                logger.warning("MAL direct: failed to parse entry: %s", e)
-                continue
+        while True:
+            url = f"https://myanimelist.net/animelist/{username}/load.json?status=7&offset={offset}"
+            logger.info("MAL direct: fetching page %d (offset=%d)", page, offset)
+
+            response = await self._client.get(url)
+            if response.status_code != 200:
+                logger.error("MAL direct fetch failed: HTTP %d", response.status_code)
+                response.raise_for_status()
+
+            raw_entries = response.json()
+            if not isinstance(raw_entries, list):
+                logger.error("MAL direct fetch: unexpected response format")
+                raise ValueError("Unexpected response format from MAL direct endpoint")
+
+            if not raw_entries:
+                break  # No more entries
+
+            # Transform MAL JSON format to match Jikan's flat entry format
+            # so _parse_entry can handle it.
+            STATUS_MAP = {
+                1: "watching",
+                2: "completed",
+                3: "on_hold",
+                4: "dropped",
+                6: "plan_to_watch",
+            }
+
+            parsed = 0
+            failures = 0
+            for raw in raw_entries:
+                try:
+                    # MAL media type → Format enum mapping
+                    media_type = (raw.get("anime_media_type_string") or "").strip()
+                    media_type_map = {
+                        "TV": "TV",
+                        "Movie": "MOVIE",
+                        "OVA": "OVA",
+                        "ONA": "ONA",
+                        "Special": "SPECIAL",
+                        "Music": "MUSIC",
+                    }
+                    fmt = media_type_map.get(media_type, "TV")
+
+                    # Build a Jikan-compatible entry dict
+                    # MAL scores are 1-10, normalize to 0-100
+                    mal_score = raw.get("score", 0)
+                    normalized_score = mal_score * 10 if mal_score else 0
+
+                    entry = {
+                        "mal_id": raw.get("anime_id", 0),
+                        "title": raw.get("anime_title", ""),
+                        "title_english": raw.get("anime_title_eng", ""),
+                        "title_japanese": raw.get("anime_title_jp", ""),
+                        "type": fmt,
+                        "source": "OTHER",
+                        "episodes": raw.get("anime_num_episodes", 0),
+                        "score": normalized_score,
+                        "episodes_watched": raw.get("num_watched_episodes", 0),
+                        "watching_status": raw.get("status", 1),
+                        "genres": raw.get("genres", []),
+                        "demographics": raw.get("demographics", []),
+                        "synopsis": raw.get("anime_synopsis", ""),
+                        "popularity": raw.get("anime_popularity"),
+                        "url": f"https://myanimelist.net/anime/{raw.get('anime_id', 0)}",
+                        "images": {
+                            "jpg": {
+                                "image_url": raw.get("anime_image_path", ""),
+                                "large_image_url": raw.get("anime_image_path", ""),
+                            },
+                        },
+                        "titles": [
+                            {"type": "Default", "title": raw.get("anime_title", "")},
+                        ],
+                    }
+                    # Add English title to titles array if different
+                    eng_title = raw.get("anime_title_eng", "")
+                    if eng_title and eng_title != raw.get("anime_title", ""):
+                        entry["titles"].append({"type": "English", "title": eng_title})
+
+                    user_anime = self._parse_entry(entry)
+                    if user_anime:
+                        all_entries.append(user_anime)
+                        parsed += 1
+                except Exception as e:
+                    logger.warning("MAL direct: failed to parse entry: %s", e)
+                    failures += 1
+                    continue
+
+            logger.info(
+                "MAL direct: page %d done — parsed=%d failures=%d total=%d",
+                page, parsed, failures, len(all_entries),
+            )
+
+            # If we got fewer entries than the limit, we've reached the end
+            if len(raw_entries) < limit_per_page:
+                break
+
+            offset += limit_per_page
+            page += 1
 
         logger.info(
-            "MAL direct: fetched %d entries for %s",
+            "MAL direct: finished — %d total entries for %s",
             len(all_entries), username,
         )
         return all_entries
@@ -208,9 +253,15 @@ class JikanClient:
     def _parse_entry(self, entry: Dict) -> Optional[UserAnime]:
         """Parse a Jikan anime list entry into UserAnime."""
         anime_data = entry.get("anime", entry)  # Jikan v4 uses direct fields
+        raw_score = entry.get("score", 0) or 0
+        # MAL scores are 0-10, normalize to 0-100
+        if raw_score <= 10:
+            normalized_score = raw_score * 10
+        else:
+            normalized_score = raw_score
         return UserAnime(
             anime=self._parse_anime(entry),
-            score=entry.get("score"),
+            score=normalized_score,
             progress=entry.get("episodes_watched", 0),
             status=self._parse_status(entry.get("watching_status")),
         )
