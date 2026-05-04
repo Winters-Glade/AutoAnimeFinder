@@ -339,7 +339,8 @@ async def fetch_jikan(request: JikanFetchRequest):
         if e.response.status_code == 404:
             raise HTTPException(
                 status_code=404,
-                detail=f"User '{username}' not found on MyAnimeList, or their anime list is private"
+                detail=f"User '{username}' not found on MyAnimeList, or their anime list is private. "
+                       f"If your list is public, this may be a temporary Jikan API issue - try again later."
             )
         logger.error("Jikan fetch failed for %s: %s", username, e)
         raise HTTPException(status_code=502, detail=f"Jikan API error: {e}")
