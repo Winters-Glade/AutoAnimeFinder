@@ -2,15 +2,16 @@
 FastAPI application for anime-soul-whisper recommendation engine.
 
 Endpoints:
-- POST /api/anilist/fetch       — Fetch user's AniList data
-- POST /api/jikan/fetch         — Fetch user's MAL data via Jikan
-- GET  /api/profile/taste       — Compute and return taste profile
-- POST /api/recommendations/mood    — Mood-based recommendations
-- POST /api/recommendations/direct  — Direct filter recommendations
-- GET  /api/anime/{id}          — Full anime details
-- GET  /api/search/history      — List saved searches
-- POST /api/search/history      — Save a search
-- GET  /api/search/history/{id} — Load a specific saved search
+- POST /api/anilist/fetch                — Fetch user's AniList data
+- POST /api/jikan/fetch                  — Fetch user's MAL data via Jikan
+- GET  /api/profile/taste                — Compute and return taste profile
+- POST /api/recommendations/auto         — Zero-input auto recommendations
+- POST /api/recommendations/mood         — Mood-based recommendations
+- POST /api/recommendations/direct       — Direct filter recommendations
+- GET  /api/anime/{id}                   — Full anime details
+- GET  /api/search/history               — List saved searches
+- POST /api/search/history               — Save a search
+- GET  /api/search/history/{id}          — Load a specific saved search
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ from models import (
 from anilist_client import AnilistClient
 from jikan_client import JikanClient
 from taste_profile import TasteProfileEngine
-from recommender import content_based, mood_based, direct_filters
+from recommender import auto_recommend, content_based, mood_based, direct_filters
 
 # ──────────────────────────────────────────────
 # Logging
@@ -616,6 +617,81 @@ async def get_recommendations(request: dict = {}):
     return RecommendationResponse(
         recommendations=recommendations,
         source="content_based",
+        totalMatches=len(recommendations),
+    )
+
+
+# ── Auto-recommendations (zero-input) ──────────
+
+
+@app.post("/api/recommendations/auto", response_model=RecommendationResponse)
+async def get_auto_recommendations(request: dict = {}):
+    """
+    Zero-input auto recommendations.
+
+    Uses the user's recently completed high-rated anime to build a weighted
+    genre/tag profile and recommend similar titles automatically.
+
+    Expects JSON body with:
+    - username (str): the user to get recommendations for
+    - source (str, optional): 'anilist' (default) or 'mal'
+    - seedCount (int, optional): number of recent high-rated anime to use (default 5)
+    """
+    username = request.get("username", "")
+    source = request.get("source", "anilist")
+    seed_count = request.get("seedCount", 5)
+
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+
+    # Get user's anime list (same cache/fetch pattern as get_recommendations)
+    cache_key = f"{source}_user_{username}"
+    cached = _load_cache(cache_key, max_age_secs=300)
+    if cached:
+        user_anime_list = [UserAnime(**ua) for ua in cached.get("animeList", [])]
+        for ua in user_anime_list:
+            _anime_catalog[ua.anime.id] = ua.anime
+    else:
+        try:
+            if source == "anilist":
+                client = get_anilist_client()
+            else:
+                client = get_jikan_client()
+            user_anime_list = await client.fetch_user_anime_list(username)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"API error: {e}")
+
+        for ua in user_anime_list:
+            _anime_catalog[ua.anime.id] = ua.anime
+
+        _save_cache(
+            cache_key,
+            {
+                "username": username,
+                "source": source,
+                "animeList": [_user_anime_to_cache_dict(ua) for ua in user_anime_list],
+                "totalCount": len(user_anime_list),
+                "fetchedAt": datetime.utcnow().isoformat(),
+            },
+        )
+
+    all_anime = _get_all_anime_from_catalog()
+    if not user_anime_list or not all_anime:
+        raise HTTPException(status_code=404, detail=f"No anime data found for {username}")
+
+    try:
+        recommendations = await auto_recommend(
+            user_anime_list,
+            all_anime,
+            seed_count=seed_count,
+        )
+    except Exception as e:
+        logger.error("Auto recommendation failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Recommendation error: {e}")
+
+    return RecommendationResponse(
+        recommendations=recommendations,
+        source="auto",
         totalMatches=len(recommendations),
     )
 

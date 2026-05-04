@@ -600,3 +600,260 @@ async def direct_filters(
         )
 
     return recommendations
+
+
+# ──────────────────────────────────────────────
+# Auto-recommendations (zero-input)
+# ──────────────────────────────────────────────
+
+
+async def auto_recommend(
+    user_anime_list: List[UserAnime],
+    all_anime: List[Anime],
+    seed_count: int = 5,
+    limit: int = 20,
+) -> List[Recommendation]:
+    """
+    Zero-input auto recommendations based on the user's recently completed
+    high-rated anime.
+
+    1. Finds recently completed anime with score > 70
+    2. Falls back to any high-rated anime if no completed entries
+    3. Builds weighted genre/tag profile from seed anime
+    4. Scores all unseen anime by profile match
+    5. Returns top N recommendations
+    """
+    # 1. Filter: COMPLETED + score > 70 (0-100 scale used by AniList/Jikan clients)
+    completed_high_rated = [
+        ua
+        for ua in user_anime_list
+        if ua.status == UserAnimeStatus.COMPLETED and (ua.score or 0) > 70
+    ]
+
+    # Sort by completedAt descending (most recently completed first)
+    def _sort_key(ua: UserAnime) -> tuple:
+        if ua.completedAt is None:
+            return (0, 0, 0)
+        return (
+            ua.completedAt.year or 0,
+            ua.completedAt.month or 0,
+            ua.completedAt.day or 0,
+        )
+
+    completed_high_rated.sort(key=_sort_key, reverse=True)
+    seed_anime = completed_high_rated[:seed_count]
+
+    # Fallback: use any high-rated anime if no completed entries
+    if not seed_anime:
+        high_rated = [ua for ua in user_anime_list if (ua.score or 0) > 70]
+        high_rated.sort(key=lambda ua: ua.completedAt is not None, reverse=True)
+        seed_anime = high_rated[:seed_count]
+
+    if not seed_anime:
+        logger.info("No high-rated anime found for auto-recommend")
+        return []
+
+    # 2. Build genre/tag weights from seed anime
+    genre_counts: Dict[str, int] = defaultdict(int)
+    tag_counts: Dict[str, int] = defaultdict(int)
+
+    for ua in seed_anime:
+        for genre in ua.anime.genres or []:
+            genre_counts[genre] += 1
+        for tag in ua.anime.tags or []:
+            tag_counts[tag.name] += 1
+
+    # Normalize weights to 0.0-1.0
+    max_genre_count = max(genre_counts.values()) if genre_counts else 1
+    max_tag_count = max(tag_counts.values()) if tag_counts else 1
+    genre_weights = {g: c / max_genre_count for g, c in genre_counts.items()}
+    tag_weights = {t: c / max_tag_count for t, c in tag_counts.items()}
+
+    # 3. Determine watched anime IDs to exclude
+    watched_ids = {ua.anime.id for ua in user_anime_list}
+
+    # 4. Score all unseen anime by weighted profile match
+    scored: List[Tuple[float, Anime]] = []
+    for anime in all_anime:
+        if anime.id in watched_ids:
+            continue
+
+        score = 0.0
+        total_weight = 0.0
+
+        # Genre matching
+        for genre in anime.genres or []:
+            w = genre_weights.get(genre, 0)
+            score += w
+            total_weight += 1.0
+
+        # Tag matching (weighted half as much as genres)
+        for tag in anime.tags or []:
+            w = tag_weights.get(tag.name, 0)
+            score += w * 0.5
+            total_weight += 0.5
+
+        if total_weight > 0:
+            normalized_score = score / total_weight
+            scored.append((normalized_score, anime))
+
+    # 5. Sort by score descending, return top N
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_scored = scored[:limit]
+
+    # Build Recommendation objects
+    recommendations = []
+    for norm_score, anime in top_scored:
+        recommendations.append(
+            Recommendation(
+                anime=anime,
+                matchScore=round(norm_score, 4),
+                matchReason="Auto: Based on your recent favorites",
+                matchedOn=["auto_recommend"],
+            )
+        )
+
+    return recommendations
+
+
+# ──────────────────────────────────────────────
+# Auto recommendations (zero-input)
+# ──────────────────────────────────────────────
+
+
+async def auto_recommend(
+    user_anime_list: List[UserAnime],
+    all_anime: List[Anime],
+    seed_count: int = 5,
+) -> List[Recommendation]:
+    """
+    Zero-input auto recommendations based on the user's recently completed
+    high-rated anime.
+
+    Algorithm:
+      1. Find completed anime with score > 70
+      2. Sort by completedAt descending, take up to *seed_count*
+      3. Build weighted genre/tag profile from seed anime
+      4. Score all unseen anime against the weighted profile
+      5. Return top 20 Recommendations
+
+    Falls back to any high-rated anime (regardless of status) if no completed
+    entries are found.
+    """
+    # ── 1. Find completed high-rated anime ──────────────────────────────
+    completed_high_rated = [
+        ua
+        for ua in user_anime_list
+        if ua.status == UserAnimeStatus.COMPLETED and (ua.score or 0) > 70
+    ]
+
+    # Sort by completedAt descending (most recently completed first)
+    def _completed_sort_key(ua: UserAnime) -> tuple:
+        if ua.completedAt is None:
+            return (0, 0, 0)
+        return (
+            ua.completedAt.year or 0,
+            ua.completedAt.month or 0,
+            ua.completedAt.day or 0,
+        )
+
+    completed_high_rated.sort(key=_completed_sort_key, reverse=True)
+    seeds = completed_high_rated[:seed_count]
+
+    # ── Fallback: any high-rated anime if none completed ────────────────
+    if not seeds:
+        fallback = [
+            ua
+            for ua in user_anime_list
+            if ua.status != UserAnimeStatus.PLANNING and (ua.score or 0) > 70
+        ]
+        fallback.sort(key=_completed_sort_key, reverse=True)
+        seeds = fallback[:seed_count]
+
+    if not seeds:
+        logger.info("No high-rated anime found for auto-recommend")
+        return []
+
+    # ── 2. Build weighted genre/tag profile from seeds ──────────────────
+    genre_counts: Dict[str, int] = defaultdict(int)
+    tag_counts: Dict[str, int] = defaultdict(int)
+
+    for ua in seeds:
+        for g in ua.anime.genres:
+            genre_counts[g.lower()] += 1
+        for t in ua.anime.tags:
+            tag_counts[t.name.lower()] += 1
+
+    # Normalise to 0.0-1.0 weights
+    max_genre_count = max(genre_counts.values()) if genre_counts else 1
+    max_tag_count = max(tag_counts.values()) if tag_counts else 1
+    genre_weights = {g: c / max_genre_count for g, c in genre_counts.items()}
+    tag_weights = {t: c / max_tag_count for t, c in tag_counts.items()}
+
+    # ── 3. Determine anime to exclude (watched + seeds) ─────────────────
+    watched_ids = {
+        ua.anime.id
+        for ua in user_anime_list
+        if ua.status and ua.status != UserAnimeStatus.PLANNING
+    }
+    seed_ids = {ua.anime.id for ua in seeds}
+    exclude_ids = watched_ids | seed_ids
+
+    # ── 4. Score all unseen anime against the weighted profile ──────────
+    scored_candidates: List[Tuple[float, Anime, List[str]]] = []
+
+    for anime in all_anime:
+        if anime.id in exclude_ids:
+            continue
+
+        anime_genres = set(g.lower() for g in anime.genres)
+        anime_tags = set(t.name.lower() for t in anime.tags)
+
+        score = 0.0
+        matched_signals: List[str] = []
+        total_weight = 0.0
+
+        for genre, weight in genre_weights.items():
+            if genre in anime_genres:
+                score += weight * GENRE_WEIGHT
+                matched_signals.append(f"seed_genre:{genre}")
+            total_weight += GENRE_WEIGHT
+
+        for tag_name, weight in tag_weights.items():
+            if tag_name in anime_tags:
+                score += weight * TAG_WEIGHT
+                matched_signals.append(f"seed_tag:{tag_name}")
+            total_weight += TAG_WEIGHT
+
+        # Normalise score by available weights so anime with many genres/tags
+        # aren't unfairly favoured over anime with few.
+        if total_weight > 0 and score > 0:
+            normalised = score / total_weight
+            scored_candidates.append((normalised, anime, matched_signals))
+
+    if not scored_candidates:
+        logger.info("No candidates matched the seed profile")
+        return []
+
+    # ── 5. Sort, take top 20, wrap in Recommendation objects ────────────
+    scored_candidates.sort(key=lambda x: x[0], reverse=True)
+    top_candidates = scored_candidates[:20]
+
+    seed_titles = [
+        s.anime.title.romaji or s.anime.title.english or f"#{s.anime.id}"
+        for s in seeds
+    ]
+    reason_prefix = f"Auto: Based on your recent favourites ({', '.join(seed_titles[:3])})"
+
+    recommendations = []
+    for norm_score, anime, _ in top_candidates:
+        recommendations.append(
+            Recommendation(
+                anime=anime,
+                matchScore=round(norm_score, 4),
+                matchReason=reason_prefix,
+                matchedOn=["auto_recommend"],
+            )
+        )
+
+    return recommendations
