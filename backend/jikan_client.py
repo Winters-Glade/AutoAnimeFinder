@@ -180,6 +180,50 @@ class JikanClient:
                     mal_score = raw.get("score", 0)
                     normalized_score = mal_score * 10 if mal_score else 0
 
+                    # Parse airing status: 1=currently_airing, 2=finished, 3=not_yet_aired
+                    airing_status = raw.get("anime_airing_status")
+                    status_map = {1: "CURRENTLY_AIRING", 2: "FINISHED", 3: "NOT_YET_AIRED"}
+                    status_str = status_map.get(airing_status) if airing_status else None
+
+                    # Parse start date (MM-DD-YY) to extract season and year
+                    season = None
+                    year = None
+                    aired_from = None
+                    aired_to = None
+                    start_date_str = raw.get("anime_start_date_string")
+                    end_date_str = raw.get("anime_end_date_string")
+                    if start_date_str:
+                        try:
+                            parts = start_date_str.split("-")
+                            if len(parts) == 3:
+                                month = int(parts[0])
+                                day = int(parts[1])
+                                yr = int(parts[2])
+                                # Handle 2-digit years
+                                if yr < 100:
+                                    yr += 2000
+                                year = yr
+                                # Determine season from month
+                                if month in (12, 1, 2):
+                                    season = "WINTER"
+                                elif month in (3, 4, 5):
+                                    season = "SPRING"
+                                elif month in (6, 7, 8):
+                                    season = "SUMMER"
+                                else:
+                                    season = "FALL"
+                                aired_from = {"year": year, "month": month, "day": day}
+                        except (ValueError, IndexError):
+                            pass
+                    if end_date_str:
+                        try:
+                            parts = end_date_str.split("-")
+                            if len(parts) == 3:
+                                aired_to = {"year": int(parts[2]) + 2000 if int(parts[2]) < 100 else int(parts[2]),
+                                            "month": int(parts[0]), "day": int(parts[1])}
+                        except (ValueError, IndexError):
+                            pass
+
                     entry = {
                         "mal_id": raw.get("anime_id", 0),
                         "title": raw.get("anime_title", ""),
@@ -187,13 +231,18 @@ class JikanClient:
                         "title_japanese": raw.get("anime_title_jp", ""),
                         "type": fmt,
                         "source": "OTHER",
+                        "season": season,
+                        "year": year,
+                        "status": status_str,
+                        "aired": {"from": aired_from, "to": aired_to},
                         "episodes": raw.get("anime_num_episodes", 0),
+                        "duration": None,
                         "score": normalized_score,
                         "episodes_watched": raw.get("num_watched_episodes", 0),
                         "watching_status": raw.get("status", 1),
                         "genres": raw.get("genres", []),
                         "demographics": raw.get("demographics", []),
-                        "synopsis": raw.get("anime_synopsis", ""),
+                        "synopsis": raw.get("anime_synopsis") or "",
                         "popularity": raw.get("anime_popularity"),
                         "url": f"https://myanimelist.net/anime/{raw.get('anime_id', 0)}",
                         "images": {
