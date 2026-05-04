@@ -227,27 +227,53 @@ class AnilistClient:
     ) -> Dict:
         """Execute a GraphQL query with rate limiting."""
         await self.rate_limiter.acquire()
-        response = await self._client.post(
-            self.base_url,
-            json={"query": query, "variables": variables},
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-        )
 
-        # Handle 429 rate limit before parsing JSON
-        if response.status_code == 429:
-            retry_after = int(response.headers.get("Retry-After", 60))
-            logger.warning("Rate limited (429). Waiting %ds...", retry_after)
-            await asyncio.sleep(retry_after)
-            return await self._graphql_request(query, variables)
+        # Retry loop for transient server errors
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = await self._client.post(
+                    self.base_url,
+                    json={"query": query, "variables": variables},
+                    headers={"Content-Type": "application/json", "Accept": "application/json"},
+                )
 
-        response.raise_for_status()
-        data = response.json()
+                # Handle 429 rate limit before parsing JSON
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    logger.warning("Rate limited (429). Waiting %ds...", retry_after)
+                    await asyncio.sleep(retry_after)
+                    return await self._graphql_request(query, variables)
 
-        if "errors" in data:
-            error_msg = data["errors"][0].get("message", "Unknown AniList error")
-            raise Exception(f"AniList API error: {error_msg}")
+                # Retry on server errors (5xx)
+                if response.status_code >= 500 and attempt < max_retries - 1:
+                    wait = 2 ** attempt  # exponential backoff: 1s, 2s, 4s
+                    logger.warning(
+                        "AniList server error %d (attempt %d/%d). Retrying in %ds...",
+                        response.status_code, attempt + 1, max_retries, wait,
+                    )
+                    await asyncio.sleep(wait)
+                    continue
 
-        return data["data"]
+                response.raise_for_status()
+                data = response.json()
+
+                if "errors" in data:
+                    error_msg = data["errors"][0].get("message", "Unknown AniList error")
+                    raise Exception(f"AniList API error: {error_msg}")
+
+                return data["data"]
+
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    logger.warning(
+                        "AniList network error (%s) on attempt %d/%d. Retrying in %ds...",
+                        e, attempt + 1, max_retries, wait,
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise
 
     async def fetch_user_anime_list(
         self, username: str
