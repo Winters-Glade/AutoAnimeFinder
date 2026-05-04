@@ -105,6 +105,16 @@ query ($username: String, $page: Int, $perPage: Int) {
             }
           }
         }
+        externalLinks {
+          site
+          url
+          type
+        }
+        streamingEpisodes {
+          title
+          url
+          site
+        }
       }
     }
   }
@@ -381,6 +391,8 @@ class AnilistClient:
             nextAiringEpisode=media.get("nextAiringEpisode"),
             relations=relations,
             recommendations=recommendations,
+            externalLinks=media.get("externalLinks", []),
+            streamingEpisodes=media.get("streamingEpisodes", []),
         )
 
     @staticmethod

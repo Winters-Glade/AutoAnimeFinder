@@ -137,6 +137,20 @@ class Studio(BaseModel):
     isAnimationStudio: bool = True
 
 
+class ExternalLink(BaseModel):
+    """External link (streaming, social, info) for an anime."""
+    site: str
+    url: str
+    type: Optional[str] = None  # "STREAMING", "SOCIAL", "INFO"
+
+
+class StreamingEpisode(BaseModel):
+    """A streaming episode with title, URL, and site."""
+    title: Optional[str] = None
+    url: Optional[str] = None
+    site: Optional[str] = None
+
+
 class AnimeRelation(BaseModel):
     """Related anime entry."""
     id: int
@@ -187,6 +201,8 @@ class Anime(BaseModel):
     nextAiringEpisode: Optional[NextAiringEpisode] = None
     relations: List[AnimeRelation] = Field(default_factory=list)
     recommendations: List[AnimeRecommendation] = Field(default_factory=list)
+    externalLinks: List[ExternalLink] = Field(default_factory=list)
+    streamingEpisodes: List[StreamingEpisode] = Field(default_factory=list)
 
 
 class UserAnime(BaseModel):

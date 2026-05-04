@@ -22,16 +22,52 @@ export default function HomePage() {
   const [avoidList, setAvoidList] = useState([])
   const [dismissedIds, setDismissedIds] = useState(new Set())
   const [watchedIds, setWatchedIds] = useState(new Set()) // anime the user has already seen
+  const [episodeMap, setEpisodeMap] = useState({}) // { [animeId]: { progress, status } }
+  const [showMalsyncPrompt, setShowMalsyncPrompt] = useState(true) // MALSync promotion
 
   useEffect(() => { loadHistory() }, [])
 
-  const handleImport = async () => {
-    if (!username.trim()) return
+  // Best-effort MALSync detection (may not work in all browsers)
+  useEffect(() => {
+    // Chrome: try to ping the extension
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(
+        'jgddhcdhccphnhbnhggnkjbkcloeclfb',
+        { type: 'PING' },
+        (res) => { if (res) setShowMalsyncPrompt(false) }
+      )
+    }
+    // Firefox: try alternative detection
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      browser.runtime.sendMessage(
+        'malsync@malsync',
+        { type: 'PING' },
+        (res) => { if (res) setShowMalsyncPrompt(false) }
+      )
+    }
+  }, [])
+
+  // Auto-import on mount if a username was previously saved
+  useEffect(() => {
+    const saved = localStorage.getItem('aionrs_username')
+    if (saved) {
+      setUsername(saved)
+      // Small delay so state is set before fetch
+      const timer = setTimeout(() => {
+        const el = document.querySelector('input[placeholder="AniList username..."]')
+        if (el) el.value = saved
+        doImport(saved)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  const doImport = async (name) => {
+    if (!name?.trim()) return
     setProfileLoading(true)
     setError(null)
     try {
-      const data = await fetchAnilist(username)
-      // Track which anime the user has already seen (exclude from recs)
+      const data = await fetchAnilist(name)
       const animeList = data?.animeList ?? data?.anime ?? []
       const seen = new Set(
         animeList
@@ -39,15 +75,28 @@ export default function HomePage() {
           .map(a => a.anime?.id ?? a.mediaId ?? a.media_id)
           .filter(Boolean)
       )
+      // Build episode progress map
+      const epMap = {}
+      animeList.forEach(a => {
+        const aid = a.anime?.id
+        if (aid) epMap[aid] = { progress: a.progress, status: a.status }
+      })
       console.log('Excluding', seen.size, 'watched anime from recommendations')
       setWatchedIds(seen)
-      const profile = await fetchTasteProfile(username, source)
+      setEpisodeMap(epMap)
+      const profile = await fetchTasteProfile(name, source)
       setTasteProfile(profile)
     } catch (e) {
       setError(e.message || 'Failed to import anime list')
     } finally {
       setProfileLoading(false)
     }
+  }
+
+  const handleImport = async () => {
+    if (!username.trim()) return
+    localStorage.setItem('aionrs_username', username.trim())
+    await doImport(username.trim())
   }
 
   const excludeList = [...new Set([...watchedIds, ...dismissedIds].filter(id => id != null && !isNaN(id)))]
@@ -120,6 +169,22 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero */}
         <div className="text-center mb-8">
+
+          {/* MALSync promotion */}
+          {showMalsyncPrompt && (
+            <div className="mb-4 px-4 py-2 rounded-lg bg-amber-900/20 border border-amber-700/30 text-amber-300 text-xs inline-flex items-center gap-2">
+              <span>💡</span>
+              <span>
+                Install{' '}
+                <a href="https://github.com/MALSync/MALSync" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
+                  MALSync
+                </a>
+                {' '}to auto-sync your AniList/MAL across 90+ streaming sites
+              </span>
+              <button onClick={() => setShowMalsyncPrompt(false)} className="ml-2 px-1.5 hover:text-amber-200">&times;</button>
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-5xl font-bold neon-text mb-2 tracking-wider">
             ✦ ANIME SOUL WHISPER ✦
           </h1>
@@ -209,6 +274,7 @@ export default function HomePage() {
                     <AnimeCard
                       key={anime.anime?.id ?? anime.id}
                       anime={anime}
+                      userProgress={episodeMap[anime.anime?.id ?? anime.id]}
                       onDismiss={(id) => handleDismiss(id)}
                       onAvoid={handleAvoid}
                     />

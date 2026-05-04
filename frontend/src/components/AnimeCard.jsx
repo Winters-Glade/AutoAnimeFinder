@@ -37,7 +37,7 @@ function getSubtitle(title) {
   return null
 }
 
-export default function AnimeCard({ anime, onDismiss, onAvoid }) {
+export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
   const [expanded, setExpanded] = useState(false)
   const [imgError, setImgError] = useState(false)
 
@@ -46,6 +46,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
   const a = {
     id: data.id ?? anime?.id,
     idMal: data.idMal ?? anime?.idMal,
+    externalLinks: data.externalLinks ?? anime?.externalLinks ?? [],
     title: data.title ?? anime?.title,
     genres: data.genres ?? anime?.genres ?? [],
     tags: data.tags ?? anime?.tags ?? [],
@@ -65,6 +66,14 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
   const displayTitle = getTitle(a.title) || 'Unknown Title'
   const subTitle = getSubtitle(a.title)
   const coverUrl = typeof a.coverImage === 'string' ? a.coverImage : a.coverImage?.large || a.coverImage?.medium
+
+  // Streaming links from AniList externalLinks
+  const streamingLinks = (a.externalLinks || [])
+    .filter(l => l.type === 'STREAMING')
+    .slice(0, 5)
+
+  // Episode progress from user's list
+  const episodesTotal = a.episodes || anime?.episodes
 
   // Extract genre names, tag names, studio names
   const genreNames = a.genres.map(g => typeof g === 'string' ? g : g.name || g.genre).filter(Boolean)
@@ -106,6 +115,13 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
               {a.matchScore != null && (
                 <div className="px-2 py-1 rounded-lg bg-purple-900/20 border border-purple-700/30">
                   <span className="font-mono text-[10px] text-purple-300">{a.matchScore.toFixed(0)}%</span>
+                </div>
+              )}
+              {userProgress?.progress != null && (
+                <div className="px-2 py-1 rounded-lg bg-blue-900/20 border border-blue-700/30">
+                  <span className="font-mono text-[10px] text-blue-300">
+                    Ep {userProgress.progress}{episodesTotal ? `/${episodesTotal}` : ''}
+                  </span>
                 </div>
               )}
             </div>
@@ -165,6 +181,36 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
             </div>
           )}
 
+          {/* Streaming badges */}
+          {streamingLinks.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {streamingLinks.slice(0, 5).map(l => (
+                <a
+                  key={l.site}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-green-900/20 text-green-400 border border-green-700/30 hover:bg-green-900/40 transition-all"
+                  title={`Watch on ${l.site}`}
+                >
+                  ▶ {l.site}
+                </a>
+              ))}
+              {streamingLinks.length > 5 && (
+                <span className="px-2 py-0.5 text-[10px] font-mono text-gray-500">+{streamingLinks.length - 5}</span>
+              )}
+              <a
+                href={`https://anilist.co/anime/${a.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-amber-900/20 text-amber-400 border border-amber-700/30 hover:bg-amber-900/40 transition-all"
+                title="View on AniList — MALSync shows 90+ streaming sites there"
+              >
+                ⊞ MALSync (90+)
+              </a>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 mt-auto pt-3 border-t border-[#1e1e2e]">
             <a
@@ -175,6 +221,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
               title="View on AniList"
             >
               ▲ AniList
+              <span className="ml-1 text-[8px] opacity-60">MALSync</span>
             </a>
             {a.idMal && (
               <a
