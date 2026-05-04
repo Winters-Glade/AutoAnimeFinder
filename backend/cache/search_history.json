@@ -6,5 +6,21 @@
     "filters": {},
     "results": [],
     "created_at": "2026-05-04T11:02:54.034069"
+  },
+  {
+    "id": 2,
+    "username": "",
+    "query": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+    "filters": {
+      "moodQuery": "fun slice-of-life school anime from the 2000s like Haruhi Suzumiya",
+      "brainPower": 50,
+      "timeCommitment": "commitment",
+      "moodIntent": "escape",
+      "avoidList": [
+        "horror"
+      ]
+    },
+    "results": [],
+    "created_at": "2026-05-04T13:23:23.385151"
   }
 ]

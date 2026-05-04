@@ -194,7 +194,7 @@ export default function HomePage() {
                       key={anime.id}
                       anime={anime}
                       onDismiss={() => handleDismiss(anime.id)}
-                      onAvoid={() => anime.genres?.forEach((g) => handleAvoid(g))}
+                      onAvoid={handleAvoid}
                     />
                   ))}
                 </div>
