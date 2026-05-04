@@ -33,9 +33,9 @@ export default function TasteProfile({ profile, loading }) {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-2">
         <Stat label="Total Anime" value={profile.totalAnime ?? profile.total_anime} />
-        <Stat label="Avg Score" value={(profile.averageScore ?? profile.average_score)?.toFixed(1)} />
-        <Stat label="Binge Level" value={(profile.bingePotential ?? profile.binge_potential) + '%'} />
-        <Stat label="Critic Type" value={profile.isHarshCritic ?? profile.is_harsh_critic ? '😈 Harsh' : '😇 Generous'} />
+        <Stat label="Avg Score" value={((profile.ratingPatterns ?? profile.ratings)?.averageScore ?? profile.average_score)?.toFixed(1)} />
+        <Stat label="Binge Level" value={Math.round((profile.bingePotential?.bingeScore ?? profile.binge_potential ?? 0) * 100) + '%'} />
+        <Stat label="Critic Type" value={(profile.ratingPatterns?.harshCritic ?? profile.is_harsh_critic) ? '😈 Harsh' : '😇 Generous'} />
       </div>
 
       {/* Top Genres */}
@@ -44,8 +44,8 @@ export default function TasteProfile({ profile, loading }) {
           <h4 className="text-xs font-mono text-neon-blue uppercase tracking-wider mb-3">Top Genres</h4>
           <div className="space-y-2">
             {(profile.topGenres ?? profile.top_genres).slice(0, 5).map((g) => {
-              const name = g.name || g.genre
-              const weight = g.weight || g.affinity || g.percentage || 50
+              const name = g.genre
+              const weight = g.score
               return (
                 <div key={name} className="flex items-center gap-2">
                   <span className="text-xs font-mono text-gray-400 w-24 text-right truncate">{name}</span>
@@ -53,7 +53,7 @@ export default function TasteProfile({ profile, loading }) {
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{
-                        width: `${weight}%`,
+                        width: `${Math.min(weight, 100)}%`,
                         background: 'linear-gradient(90deg, #00d4ff, #a855f7, #ec4899)',
                         boxShadow: '0 0 8px rgba(168,85,247,0.3)',
                       }}
@@ -73,7 +73,7 @@ export default function TasteProfile({ profile, loading }) {
           <h4 className="text-xs font-mono text-neon-purple uppercase tracking-wider mb-3">Top Tags</h4>
           <div className="flex flex-wrap gap-1.5">
             {(profile.topTags ?? profile.top_tags).slice(0, 8).map((t) => {
-              const name = t.name || t.tag
+              const name = t.tag
               return (
                 <span
                   key={name}
@@ -93,7 +93,7 @@ export default function TasteProfile({ profile, loading }) {
           <h4 className="text-xs font-mono text-neon-pink uppercase tracking-wider mb-2">Top Studios</h4>
           <div className="flex flex-wrap gap-1.5">
             {(profile.topStudios ?? profile.top_studios).slice(0, 5).map((s) => {
-              const name = s.name || s.studio
+              const name = s.studio
               return (
                 <span key={name} className="badge-blue text-[10px]">{name}</span>
               )
