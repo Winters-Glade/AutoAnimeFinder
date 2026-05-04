@@ -193,16 +193,18 @@ class RateLimiter:
         self.max_per_minute = max_per_minute
         self.min_interval = 60.0 / max_per_minute
         self._last_request = 0.0
+        self._lock = asyncio.Lock()
 
     async def acquire(self):
         """Wait if necessary to stay within rate limits."""
-        now = time.monotonic()
-        since_last = now - self._last_request
-        if since_last < self.min_interval:
-            wait = self.min_interval - since_last
-            logger.debug("Rate limiter: sleeping %.2fs", wait)
-            await asyncio.sleep(wait)
-        self._last_request = time.monotonic()
+        async with self._lock:
+            now = time.monotonic()
+            since_last = now - self._last_request
+            if since_last < self.min_interval:
+                wait = self.min_interval - since_last
+                logger.debug("Rate limiter: sleeping %.2fs", wait)
+                await asyncio.sleep(wait)
+            self._last_request = time.monotonic()
 
 
 # ──────────────────────────────────────────────
@@ -231,6 +233,15 @@ class AnilistClient:
                 json={"query": query, "variables": variables},
                 headers={"Content-Type": "application/json", "Accept": "application/json"},
             )
+
+            # Handle 429 rate limit before parsing JSON
+            if response.status_code == 429:
+                retry_after = int(response.headers.get("Retry-After", 60))
+                logger.warning("Rate limited (429). Waiting %ds...", retry_after)
+                await asyncio.sleep(retry_after)
+                return await self._graphql_request(query, variables)
+
+            response.raise_for_status()
             data = response.json()
 
             if "errors" in data:
@@ -238,13 +249,6 @@ class AnilistClient:
                 raise Exception(f"AniList API error: {error_msg}")
 
             return data["data"]
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                retry_after = int(e.response.headers.get("Retry-After", 60))
-                logger.warning("Rate limited. Waiting %ds...", retry_after)
-                await asyncio.sleep(retry_after)
-                return await self._graphql_request(query, variables)
-            raise
 
     async def fetch_user_anime_list(
         self, username: str
