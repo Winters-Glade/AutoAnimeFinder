@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1e1e2e #0a0a0f;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #0a0a0f;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #1e1e2e;
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #2e2e3e;
+  }
+
+  body {
+    @apply bg-cyber-black text-gray-300 font-mono antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  ::selection {
+    @apply bg-neon-purple/30 text-white;
+  }
+}
+
+@layer components {
+  .neon-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink;
+  }
+
+  .neon-border {
+    @apply border border-cyber-border hover:border-neon-purple/50 transition-colors duration-300;
+  }
+
+  .neon-glow-border {
+    border-image: linear-gradient(135deg, #00d4ff, #a855f7, #ec4899) 1;
+  }
+
+  .cyber-button {
+    @apply relative px-6 py-3 font-display font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-r from-neon-blue/20 via-neon-purple/20 to-neon-pink/20
+           border border-neon-purple/40 rounded-lg
+           text-white shadow-neon-card
+           hover:shadow-neon-purple hover:border-neon-purple/60
+           transition-all duration-300 ease-out
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none;
+  }
+
+  .cyber-button::before {
+    content: '';
+    @apply absolute inset-0 rounded-lg bg-gradient-to-r from-neon-blue/10 via-neon-purple/10 to-neon-pink/10
+           opacity-0 transition-opacity duration-300;
+  }
+
+  .cyber-button:hover::before {
+    @apply opacity-100;
+  }
+
+  .cyber-card {
+    @apply bg-cyber-card border border-cyber-border rounded-xl shadow-neon-card
+           hover:shadow-neon-card transition-all duration-300;
+  }
+
+  .cyber-input {
+    @apply w-full bg-cyber-dark border border-cyber-border rounded-lg px-4 py-3
+           font-mono text-sm text-gray-200 placeholder-gray-600
+           focus:outline-none focus:border-neon-purple/50 focus:ring-1 focus:ring-neon-purple/30
+           transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium;
+  }
+
+  .badge-blue {
+    @apply badge bg-neon-blue/10 text-neon-blue border border-neon-blue/20;
+  }
+
+  .badge-purple {
+    @apply badge bg-neon-purple/10 text-neon-purple border border-neon-purple/20;
+  }
+
+  .badge-pink {
+    @apply badge bg-neon-pink/10 text-neon-pink border border-neon-pink/20;
+  }
+
+  .badge-cyan {
+    @apply badge bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20;
+  }
+
+  .badge-green {
+    @apply badge bg-neon-green/10 text-neon-green border border-neon-green/20;
+  }
+}

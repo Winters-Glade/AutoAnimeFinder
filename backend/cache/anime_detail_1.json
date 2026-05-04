@@ -1,0 +1,428 @@
+{
+  "id": 1,
+  "title": {
+    "romaji": "Cowboy Bebop",
+    "english": "Cowboy Bebop",
+    "native": "\u30ab\u30a6\u30dc\u30fc\u30a4\u30d3\u30d0\u30c3\u30d7"
+  },
+  "genres": [
+    "Action",
+    "Adventure",
+    "Drama",
+    "Sci-Fi"
+  ],
+  "tags": [
+    {
+      "id": 63,
+      "name": "Space",
+      "rank": 94,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 648,
+      "name": "Crime",
+      "rank": 92,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 193,
+      "name": "Episodic",
+      "rank": 89,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 105,
+      "name": "Ensemble Cast",
+      "rank": 86,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 109,
+      "name": "Primarily Adult Cast",
+      "rank": 85,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 85,
+      "name": "Tragedy",
+      "rank": 83,
+      "isGeneralSpoiler": true,
+      "isMediaSpoiler": true
+    },
+    {
+      "id": 1310,
+      "name": "Travel",
+      "rank": 82,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 327,
+      "name": "Noir",
+      "rank": 80,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 391,
+      "name": "Philosophy",
+      "rank": 80,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 1277,
+      "name": "Found Family",
+      "rank": 80,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 104,
+      "name": "Anti-Hero",
+      "rank": 79,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 157,
+      "name": "Guns",
+      "rank": 78,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 108,
+      "name": "Cyberpunk",
+      "rank": 78,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 82,
+      "name": "Male Protagonist",
+      "rank": 77,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 98,
+      "name": "Female Protagonist",
+      "rank": 66,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 285,
+      "name": "Terrorism",
+      "rank": 66,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 1045,
+      "name": "Heterosexual",
+      "rank": 65,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": true
+    },
+    {
+      "id": 30,
+      "name": "Martial Arts",
+      "rank": 65,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 931,
+      "name": "Tomboy",
+      "rank": 64,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 801,
+      "name": "Cyborg",
+      "rank": 64,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 240,
+      "name": "Amnesia",
+      "rank": 62,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": true
+    },
+    {
+      "id": 1648,
+      "name": "Cowboys",
+      "rank": 60,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 91,
+      "name": "Gambling",
+      "rank": 57,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 199,
+      "name": "Yakuza",
+      "rank": 50,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 489,
+      "name": "Drugs",
+      "rank": 49,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 100,
+      "name": "Nudity",
+      "rank": 45,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 40,
+      "name": "Police",
+      "rank": 44,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 586,
+      "name": "Cult",
+      "rank": 43,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 335,
+      "name": "Tanned Skin",
+      "rank": 38,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 476,
+      "name": "Circus",
+      "rank": 25,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 90,
+      "name": "CGI",
+      "rank": 20,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    },
+    {
+      "id": 145,
+      "name": "Work",
+      "rank": 20,
+      "isGeneralSpoiler": false,
+      "isMediaSpoiler": false
+    }
+  ],
+  "studios": [
+    {
+      "id": 14,
+      "name": "Sunrise",
+      "isAnimationStudio": true
+    }
+  ],
+  "demographics": [],
+  "season": "SPRING",
+  "seasonYear": 1998,
+  "status": "FINISHED",
+  "episodes": 26,
+  "duration": 24,
+  "format": "TV",
+  "source": "ORIGINAL",
+  "synonyms": [
+    "\uce74\uc6b0\ubcf4\uc774 \ube44\ubc25",
+    "\u05e7\u05d0\u05d5\u05d1\u05d5\u05d9 \u05d1\u05d9\u05d1\u05d5\u05e4",
+    "\u0e04\u0e32\u0e27\u0e1a\u0e2d\u0e22 \u0e1a\u0e35\u0e1a\u0e4a\u0e2d\u0e1b",
+    "\u041a\u043e\u0432\u0431\u043e\u0439 \u0411\u0438\u0431\u043e\u043f",
+    "\u039a\u03b1\u03bf\u03c5\u03bc\u03c0\u03cc\u03b7\u03b4\u03b5\u03c2 \u03c4\u03bf\u03c5 \u0394\u03b9\u03b1\u03c3\u03c4\u03ae\u03bc\u03b1\u03c4\u03bf\u03c2",
+    "Kowboj Bebop"
+  ],
+  "meanScore": 86,
+  "averageScore": 86,
+  "popularity": 441143,
+  "synopsis": "Enter a world in the distant future, where Bounty Hunters roam the solar system. Spike and Jet, bounty hunting partners, set out on journeys in an ever struggling effort to win bounty rewards to survive.<br><br>\nWhile traveling, they meet up with other very interesting people. Could Faye, the beautiful and ridiculously poor gambler, Edward, the computer genius, and Ein, the engineered dog be a good addition to the group?",
+  "description": "Enter a world in the distant future, where Bounty Hunters roam the solar system. Spike and Jet, bounty hunting partners, set out on journeys in an ever struggling effort to win bounty rewards to survive.<br><br>\nWhile traveling, they meet up with other very interesting people. Could Faye, the beautiful and ridiculously poor gambler, Edward, the computer genius, and Ein, the engineered dog be a good addition to the group?",
+  "coverImage": {
+    "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-GCsPm7waJ4kS.png",
+    "medium": null
+  },
+  "bannerImage": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/1-OquNCNB6srGe.jpg",
+  "startDate": {
+    "year": 1998,
+    "month": 4,
+    "day": 3
+  },
+  "endDate": {
+    "year": 1999,
+    "month": 4,
+    "day": 24
+  },
+  "nextAiringEpisode": null,
+  "relations": [
+    {
+      "id": 5,
+      "title": {
+        "romaji": "Cowboy Bebop: Tengoku no Tobira",
+        "english": "Cowboy Bebop: The Movie - Knockin' on Heaven's Door",
+        "native": null
+      },
+      "relationType": "SIDE_STORY",
+      "format": "MOVIE"
+    },
+    {
+      "id": 17205,
+      "title": {
+        "romaji": "Cowboy Bebop: Ein no Natsuyasumi",
+        "english": "Ein's Summer Vacation",
+        "native": null
+      },
+      "relationType": "SIDE_STORY",
+      "format": "SPECIAL"
+    },
+    {
+      "id": 30173,
+      "title": {
+        "romaji": "Cowboy Bebop",
+        "english": "Cowboy Bebop",
+        "native": null
+      },
+      "relationType": "ADAPTATION",
+      "format": "MANGA"
+    },
+    {
+      "id": 30174,
+      "title": {
+        "romaji": "Shooting Star Bebop: Cowboy Bebop",
+        "english": "Cowboy Bebop Shooting Star",
+        "native": null
+      },
+      "relationType": "ADAPTATION",
+      "format": "MANGA"
+    },
+    {
+      "id": 4037,
+      "title": {
+        "romaji": "Cowboy Bebop: Yoseatsume Blues",
+        "english": null,
+        "native": null
+      },
+      "relationType": "SUMMARY",
+      "format": "SPECIAL"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": 205,
+      "title": {
+        "romaji": "Samurai Champloo",
+        "english": "Samurai Champloo",
+        "native": null
+      },
+      "rating": 1607
+    },
+    {
+      "id": 6,
+      "title": {
+        "romaji": "TRIGUN",
+        "english": "Trigun",
+        "native": null
+      },
+      "rating": 645
+    },
+    {
+      "id": 110349,
+      "title": {
+        "romaji": "GREAT PRETENDER",
+        "english": "Great Pretender",
+        "native": null
+      },
+      "rating": 414
+    },
+    {
+      "id": 20057,
+      "title": {
+        "romaji": "Space\u2606Dandy",
+        "english": "Space Dandy",
+        "native": null
+      },
+      "rating": 312
+    },
+    {
+      "id": 889,
+      "title": {
+        "romaji": "BLACK LAGOON",
+        "english": "Black Lagoon",
+        "native": null
+      },
+      "rating": 288
+    },
+    {
+      "id": 167336,
+      "title": {
+        "romaji": "Lazarus",
+        "english": "LAZARUS",
+        "native": null
+      },
+      "rating": 174
+    },
+    {
+      "id": 2251,
+      "title": {
+        "romaji": "Baccano!",
+        "english": "Baccano!",
+        "native": null
+      },
+      "rating": 166
+    },
+    {
+      "id": 4087,
+      "title": {
+        "romaji": "Michiko to Hatchin",
+        "english": "Michiko & Hatchin",
+        "native": null
+      },
+      "rating": 112
+    },
+    {
+      "id": 467,
+      "title": {
+        "romaji": "Koukaku Kidoutai: STAND ALONE COMPLEX",
+        "english": "Ghost in the Shell: Stand Alone Complex",
+        "native": null
+      },
+      "rating": 82
+    },
+    {
+      "id": 400,
+      "title": {
+        "romaji": "Seihou Bukyou Outlaw Star",
+        "english": "Outlaw Star",
+        "native": null
+      },
+      "rating": 79
+    }
+  ]
+}
