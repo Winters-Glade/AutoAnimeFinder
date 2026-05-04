@@ -20,10 +20,12 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 from models import (
     AnilistFetchRequest,
@@ -60,7 +62,7 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 
 app = FastAPI(
-    title="Anime Soul Whisper — Recommendation Engine",
+    title="AutoAnimeFinder — Recommendation Engine",
     description="AI-powered anime recommendation engine with taste profiling",
     version="1.0.0",
 )
@@ -71,6 +73,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ──────────────────────────────────────────────
+# Serve built frontend as static files
+# ──────────────────────────────────────────────
+
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+FRONTEND_INDEX = os.path.join(FRONTEND_DIST, "index.html")
+
+# Serve assets (JS, CSS, images) from the built frontend
+ASSETS_DIR = os.path.join(FRONTEND_DIST, "assets")
+if os.path.isdir(ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="frontend_assets")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    fpath = os.path.join(FRONTEND_DIST, "favicon.svg")
+    if os.path.isfile(fpath):
+        return FileResponse(fpath, media_type="image/svg+xml")
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
 
 # ──────────────────────────────────────────────
 # Cache directory
@@ -121,6 +144,32 @@ def _anime_to_cache_dict(anime: Anime) -> dict:
 def _user_anime_to_cache_dict(ua: UserAnime) -> dict:
     """Convert a UserAnime to a JSON-serializable dict."""
     return json.loads(ua.model_dump_json())
+
+
+def _get_watched_ids_from_cache(username: str, source: str) -> Set[int]:
+    """
+    Look up the cached user anime list and return a set of anime IDs
+    that the user has already watched (status != PLANNING).
+
+    Uses normalized username (lowercase, no hyphens) for cache key,
+    matching the fetch endpoint's convention.
+
+    Returns an empty set if no cache is found.
+    """
+    cache_username = username.lower().replace("-", "")
+    cache_key = f"{source}_user_{cache_username}"
+    cached = _load_cache(cache_key, max_age_secs=3600)
+    if not cached:
+        return set()
+    anime_list = cached.get("animeList", [])
+    watched_ids = set()
+    for ua in anime_list:
+        status = ua.get("status", "")
+        if status.upper() != "PLANNING":
+            anime_id = ua.get("anime", {}).get("id")
+            if anime_id:
+                watched_ids.add(int(anime_id))
+    return watched_ids
 
 
 # ──────────────────────────────────────────────
@@ -220,7 +269,9 @@ async def fetch_anilist(request: AnilistFetchRequest):
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
-    cache_key = f"anilist_user_{username}"
+    # Normalize username for cache key (lowercase, no hyphens)
+    cache_username = username.lower().replace("-", "")
+    cache_key = f"anilist_user_{cache_username}"
     cached = _load_cache(cache_key, max_age_secs=300)  # 5 min cache
     if cached:
         logger.info("Returning cached AniList data for %s", username)
@@ -246,16 +297,7 @@ async def fetch_anilist(request: AnilistFetchRequest):
     )
 
     # Cache the response
-    _save_cache(
-        cache_key,
-        {
-            "username": username,
-            "source": "anilist",
-            "animeList": [_user_anime_to_cache_dict(ua) for ua in user_anime_list],
-            "totalCount": len(user_anime_list),
-            "fetchedAt": datetime.utcnow().isoformat(),
-        },
-    )
+    _save_cache(cache_key, json.loads(response.model_dump_json()))
 
     return response
 
@@ -405,6 +447,18 @@ async def get_anime_details(anime_id: int):
 @app.post("/api/recommendations/mood", response_model=RecommendationResponse)
 async def get_mood_recommendations(request: MoodRecommendationRequest):
     """Get AI-powered mood-based anime recommendations."""
+    # ── Auto-filter: merge watched anime into excludeList ──
+    exclude_list = list(request.excludeList or [])
+    if request.username:
+        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        if watched:
+            exclude_list = list(set(exclude_list) | watched)
+            logger.debug(
+                "Auto-filter: added %d watched IDs to excludeList for user '%s'",
+                len(watched),
+                request.username,
+            )
+
     # Build the candidate pool from the catalog
     all_anime = _get_all_anime_from_catalog()
     if not all_anime:
@@ -419,7 +473,7 @@ async def get_mood_recommendations(request: MoodRecommendationRequest):
         "timeCommitment": request.timeCommitment,
         "moodIntent": request.moodIntent,
         "avoidList": request.avoidList or [],
-        "excludeList": request.excludeList or [],
+        "excludeList": exclude_list,
     }
 
     try:
@@ -445,6 +499,18 @@ async def get_mood_recommendations(request: MoodRecommendationRequest):
 @app.post("/api/recommendations/direct", response_model=RecommendationResponse)
 async def get_direct_recommendations(request: DirectRecommendationRequest):
     """Get filter-based anime recommendations (no AI mood)."""
+    # ── Auto-filter: merge watched anime into excludeList ──
+    exclude_list = list(request.excludeList or [])
+    if request.username:
+        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        if watched:
+            exclude_list = list(set(exclude_list) | watched)
+            logger.debug(
+                "Auto-filter: added %d watched IDs to excludeList for user '%s'",
+                len(watched),
+                request.username,
+            )
+
     all_anime = _get_all_anime_from_catalog()
     if not all_anime:
         raise HTTPException(
@@ -458,7 +524,7 @@ async def get_direct_recommendations(request: DirectRecommendationRequest):
         "brainPower": request.brainPower,
         "mood": request.mood,
         "avoidList": request.avoidList or [],
-        "excludeList": request.excludeList or [],
+        "excludeList": exclude_list,
         "limit": request.limit,
     }
 
@@ -577,6 +643,19 @@ async def get_search_history_entry(entry_id: int):
             return SearchHistoryEntry(**e)
     raise HTTPException(status_code=404, detail=f"Search history entry #{entry_id} not found")
 
+
+# ──────────────────────────────────────────────
+# SPA catch-all — serve index.html for all non-API paths
+# ──────────────────────────────────────────────
+
+if os.path.isfile(FRONTEND_INDEX):
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        # Don't catch /api/ paths — let them return proper 404
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return FileResponse(FRONTEND_INDEX)
 
 # ──────────────────────────────────────────────
 # Entry point

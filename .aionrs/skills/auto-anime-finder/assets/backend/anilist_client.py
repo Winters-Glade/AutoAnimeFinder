@@ -52,6 +52,7 @@ query ($username: String, $page: Int, $perPage: Int) {
       completedAt { year month day }
       media {
         id
+        idMal
         title { romaji english native }
         genres
         tags {
@@ -103,6 +104,16 @@ query ($username: String, $page: Int, $perPage: Int) {
               rating
             }
           }
+        }
+        externalLinks {
+          site
+          url
+          type
+        }
+        streamingEpisodes {
+          title
+          url
+          site
         }
       }
     }
@@ -348,6 +359,7 @@ class AnilistClient:
 
         return Anime(
             id=media["id"],
+            idMal=media.get("idMal"),
             title=media.get("title", {}),
             genres=media.get("genres", []),
             tags=[{
@@ -379,6 +391,8 @@ class AnilistClient:
             nextAiringEpisode=media.get("nextAiringEpisode"),
             relations=relations,
             recommendations=recommendations,
+            externalLinks=media.get("externalLinks", []),
+            streamingEpisodes=media.get("streamingEpisodes", []),
         )
 
     @staticmethod

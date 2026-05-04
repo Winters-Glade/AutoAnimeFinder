@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import AutoMode from '../components/AutoMode'
+import SimilarMode from '../components/SimilarMode'
 import MoodTranslator from '../components/MoodTranslator'
 import DirectMode from '../components/DirectMode'
 import TasteProfile from '../components/TasteProfile'
 import SearchHistory from '../components/SearchHistory'
 import AnimeCard from '../components/AnimeCard'
 import NeuralLoader from '../components/NeuralLoader'
-import { fetchAnilist, fetchTasteProfile, getAutoRecs, getMoodRecs, getDirectRecs,
+import { fetchAnilist, fetchTasteProfile, getAutoRecs, getSimilarRecs, getMoodRecs, getDirectRecs,
          getSearchHistory, saveSearchHistory } from '../api/client'
 
 export default function HomePage() {
@@ -239,6 +240,16 @@ export default function HomePage() {
             ⚡ Auto
           </button>
           <button
+            onClick={() => setActiveTab('similar')}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'similar'
+                ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white shadow-lg shadow-green-900/30'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+            }`}
+          >
+            🔍 If You Liked...
+          </button>
+          <button
             onClick={() => setActiveTab('mood')}
             className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'mood'
@@ -271,6 +282,15 @@ export default function HomePage() {
                 recommendations={recommendations}
                 loading={loading}
                 error={error}
+                watchedIds={watchedIds}
+                episodeMap={episodeMap}
+                onDismiss={(id) => handleDismiss(id)}
+                onAvoid={handleAvoid}
+              />
+            ) : activeTab === 'similar' ? (
+              <SimilarMode
+                username={username}
+                source={source}
                 watchedIds={watchedIds}
                 episodeMap={episodeMap}
                 onDismiss={(id) => handleDismiss(id)}
@@ -319,6 +339,8 @@ export default function HomePage() {
               <div className="mt-8 text-center text-gray-500 text-sm">
                 {activeTab === 'mood'
                   ? 'Describe your mood above to discover anime'
+                  : activeTab === 'similar'
+                  ? 'Search for anime above to find similar shows'
                   : 'Select genres and filters to get started'}
               </div>
             )}

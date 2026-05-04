@@ -21,16 +21,70 @@ export default function HomePage() {
   const [history, setHistory] = useState([])
   const [avoidList, setAvoidList] = useState([])
   const [dismissedIds, setDismissedIds] = useState(new Set())
+  const [watchedIds, setWatchedIds] = useState(new Set()) // anime the user has already seen
+  const [episodeMap, setEpisodeMap] = useState({}) // { [animeId]: { progress, status } }
+  const [showMalsyncPrompt, setShowMalsyncPrompt] = useState(true) // MALSync promotion
 
   useEffect(() => { loadHistory() }, [])
 
-  const handleImport = async () => {
-    if (!username.trim()) return
+  // Best-effort MALSync detection (may not work in all browsers)
+  useEffect(() => {
+    // Chrome: try to ping the extension
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(
+        'jgddhcdhccphnhbnhggnkjbkcloeclfb',
+        { type: 'PING' },
+        (res) => { if (res) setShowMalsyncPrompt(false) }
+      )
+    }
+    // Firefox: try alternative detection
+    if (typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+      browser.runtime.sendMessage(
+        'malsync@malsync',
+        { type: 'PING' },
+        (res) => { if (res) setShowMalsyncPrompt(false) }
+      )
+    }
+  }, [])
+
+  // Auto-import on mount if a username was previously saved
+  useEffect(() => {
+    const saved = localStorage.getItem('aionrs_username')
+    if (saved) {
+      setUsername(saved)
+      // Small delay so state is set before fetch
+      const timer = setTimeout(() => {
+        const el = document.querySelector('input[placeholder="AniList username..."]')
+        if (el) el.value = saved
+        doImport(saved)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  const doImport = async (name) => {
+    if (!name?.trim()) return
     setProfileLoading(true)
     setError(null)
     try {
-      await fetchAnilist(username)
-      const profile = await fetchTasteProfile(username, source)
+      const data = await fetchAnilist(name)
+      const animeList = data?.animeList ?? data?.anime ?? []
+      const seen = new Set(
+        animeList
+          .filter(a => a.status !== 'PLANNING' && a.status !== 'planning')
+          .map(a => a.anime?.id ?? a.mediaId ?? a.media_id)
+          .filter(Boolean)
+      )
+      // Build episode progress map
+      const epMap = {}
+      animeList.forEach(a => {
+        const aid = a.anime?.id
+        if (aid) epMap[aid] = { progress: a.progress, status: a.status }
+      })
+      console.log('Excluding', seen.size, 'watched anime from recommendations')
+      setWatchedIds(seen)
+      setEpisodeMap(epMap)
+      const profile = await fetchTasteProfile(name, source)
       setTasteProfile(profile)
     } catch (e) {
       setError(e.message || 'Failed to import anime list')
@@ -39,11 +93,21 @@ export default function HomePage() {
     }
   }
 
+  const handleImport = async () => {
+    if (!username.trim()) return
+    localStorage.setItem('aionrs_username', username.trim())
+    await doImport(username.trim())
+  }
+
+  const excludeList = [...new Set([...watchedIds, ...dismissedIds].filter(id => id != null && !isNaN(id)))]
+
   const handleMoodRec = async (filters) => {
     setLoading(true)
     setError(null)
     try {
-      const results = await getMoodRecs({ username, source, ...filters })
+      const data = await getMoodRecs({ username, source, excludeList, ...filters })
+      const results = data?.recommendations ?? data ?? []
+      if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
       await saveSearchHistory({ query: filters.moodQuery || '(mood)', type: 'mood', filters })
       loadHistory()
@@ -58,7 +122,9 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const results = await getDirectRecs({ username, source, ...filters })
+      const data = await getDirectRecs({ username, source, excludeList, ...filters })
+      const results = data?.recommendations ?? data ?? []
+      if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
       await saveSearchHistory({ query: `Direct: ${(filters.genres || []).join(', ')}`, type: 'direct', filters })
       loadHistory()
@@ -70,8 +136,11 @@ export default function HomePage() {
   }
 
   const handleDismiss = (id) => {
-    setDismissedIds(prev => new Set([...prev, id]))
-    setRecommendations(prev => prev.filter(r => r.id !== id))
+    if (id == null) return
+    const numId = Number(id)
+    if (isNaN(numId)) return
+    setDismissedIds(prev => new Set([...prev, numId]))
+    setRecommendations(prev => prev.filter(r => (r.anime?.id ?? r.id) !== numId))
   }
 
   const handleAvoid = (genre) => {
@@ -91,7 +160,7 @@ export default function HomePage() {
     else if (search.type === 'direct' && search.filters) handleDirectRec(search.filters)
   }
 
-  const filteredResults = recommendations.filter(r => !dismissedIds.has(r.id))
+  const filteredResults = Array.isArray(recommendations) ? recommendations.filter(r => !dismissedIds.has(r.id)) : []
 
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white">
@@ -100,6 +169,22 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero */}
         <div className="text-center mb-8">
+
+          {/* MALSync promotion */}
+          {showMalsyncPrompt && (
+            <div className="mb-4 px-4 py-2 rounded-lg bg-amber-900/20 border border-amber-700/30 text-amber-300 text-xs inline-flex items-center gap-2">
+              <span>💡</span>
+              <span>
+                Install{' '}
+                <a href="https://github.com/MALSync/MALSync" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
+                  MALSync
+                </a>
+                {' '}to auto-sync your AniList/MAL across 90+ streaming sites
+              </span>
+              <button onClick={() => setShowMalsyncPrompt(false)} className="ml-2 px-1.5 hover:text-amber-200">&times;</button>
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-5xl font-bold neon-text mb-2 tracking-wider">
             ✦ ANIME SOUL WHISPER ✦
           </h1>
@@ -136,7 +221,7 @@ export default function HomePage() {
 
         {error && (
           <div className="max-w-xl mx-auto mb-6 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm text-center">
-            ⚠️ {error}
+            ⚠️ {typeof error === 'string' ? error : 'An unexpected error occurred'}
           </div>
         )}
 
@@ -187,10 +272,11 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {filteredResults.map((anime) => (
                     <AnimeCard
-                      key={anime.id}
+                      key={anime.anime?.id ?? anime.id}
                       anime={anime}
-                      onDismiss={() => handleDismiss(anime.id)}
-                      onAvoid={() => anime.genres?.forEach((g) => handleAvoid(g))}
+                      userProgress={episodeMap[anime.anime?.id ?? anime.id]}
+                      onDismiss={(id) => handleDismiss(id)}
+                      onAvoid={handleAvoid}
                     />
                   ))}
                 </div>

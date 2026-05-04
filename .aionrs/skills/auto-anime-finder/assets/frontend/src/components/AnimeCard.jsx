@@ -9,7 +9,9 @@ const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
 
 function formatScore(s) {
   if (s == null) return null
-  return typeof s === 'number' ? s.toFixed(1) : s
+  const n = typeof s === 'number' ? s : parseFloat(s)
+  // AniList meanScore is 0-100, convert to 1-10 scale
+  return n > 20 ? (n / 10).toFixed(1) : n.toFixed(1)
 }
 
 function scoreColor(s) {
@@ -20,29 +22,66 @@ function scoreColor(s) {
   return 'text-pink-400'
 }
 
-export default function AnimeCard({ anime, onDismiss, onAvoid }) {
+/**
+ * Extract a string from a nested title object, or a direct string.
+ */
+function getTitle(title) {
+  if (!title) return null
+  if (typeof title === 'string') return title
+  return title.english || title.romaji || title.native || null
+}
+
+function getSubtitle(title) {
+  if (!title || typeof title === 'string') return null
+  if (title.english && title.romaji && title.english !== title.romaji) return title.romaji
+  return null
+}
+
+export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
   const [expanded, setExpanded] = useState(false)
   const [imgError, setImgError] = useState(false)
 
-  const {
-    id,
-    title_romaji,
-    title_english,
-    cover_image,
-    score,
-    episodes,
-    season,
-    format,
-    status,
-    genres = [],
-    synopsis,
-    studios = [],
-    tags = [],
-  } = anime || {}
+  // Normalize the anime data — handle both nested API format and flat test format
+  const data = anime?.anime ?? anime ?? {}
+  const a = {
+    id: data.id ?? anime?.id,
+    idMal: data.idMal ?? anime?.idMal,
+    externalLinks: data.externalLinks ?? anime?.externalLinks ?? [],
+    title: data.title ?? anime?.title,
+    genres: data.genres ?? anime?.genres ?? [],
+    tags: data.tags ?? anime?.tags ?? [],
+    studios: data.studios ?? anime?.studios ?? [],
+    coverImage: data.coverImage ?? anime?.coverImage ?? anime?.cover_image,
+    score: data.meanScore ?? data.averageScore ?? anime?.score ?? anime?.meanScore,
+    episodes: data.episodes ?? anime?.episodes,
+    season: data.season ?? anime?.season,
+    seasonYear: data.seasonYear ?? anime?.seasonYear,
+    format: data.format ?? anime?.format,
+    status: data.status ?? anime?.status,
+    synopsis: data.synopsis ?? data.description ?? anime?.synopsis,
+    matchScore: anime?.matchScore,
+    matchReason: anime?.matchReason,
+  }
 
-  const displayTitle = title_english || title_romaji || 'Unknown Title'
-  const subTitle = title_english && title_romaji !== title_english ? title_romaji : null
-  const badges = [episodes && `${episodes} eps`, season, format, status].filter(Boolean)
+  const displayTitle = getTitle(a.title) || 'Unknown Title'
+  const subTitle = getSubtitle(a.title)
+  const coverUrl = typeof a.coverImage === 'string' ? a.coverImage : a.coverImage?.large || a.coverImage?.medium
+
+  // Streaming links from AniList externalLinks
+  const streamingLinks = (a.externalLinks || [])
+    .filter(l => l.type === 'STREAMING')
+    .slice(0, 5)
+
+  // Episode progress from user's list
+  const episodesTotal = a.episodes || anime?.episodes
+
+  // Extract genre names, tag names, studio names
+  const genreNames = a.genres.map(g => typeof g === 'string' ? g : g.name || g.genre).filter(Boolean)
+  const tagNames = a.tags.map(t => typeof t === 'string' ? t : t.name).filter(Boolean)
+  const studioNames = a.studios.map(s => typeof s === 'string' ? s : s.name || s.studio).filter(Boolean)
+
+  const seasonStr = a.season ? (a.seasonYear ? `${a.season} ${a.seasonYear}` : a.season) : null
+  const badges = [a.episodes && `${a.episodes} eps`, seasonStr, a.format, a.status].filter(Boolean)
 
   return (
     <div className="cyber-card overflow-hidden group">
@@ -50,7 +89,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
         {/* Cover */}
         <div className="relative w-full sm:w-36 h-48 sm:h-44 flex-shrink-0 overflow-hidden bg-[#0f0f1a]">
           <img
-            src={imgError || !cover_image ? PLACEHOLDER : cover_image}
+            src={imgError || !coverUrl ? PLACEHOLDER : coverUrl}
             alt={displayTitle}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={() => setImgError(true)}
@@ -67,15 +106,31 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
               <h3 className="font-display text-base font-semibold text-white truncate">{displayTitle}</h3>
               {subTitle && <p className="text-xs text-gray-500 font-mono truncate mt-0.5">{subTitle}</p>}
             </div>
-            {score != null && (
-              <div className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0f0f1a] border border-[#1e1e2e] ${scoreColor(score)}`}>
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span className="font-mono text-sm font-bold">{formatScore(score)}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {a.score != null && (
+                <div className={`px-2.5 py-1 rounded-lg bg-[#0f0f1a] border border-[#1e1e2e] ${scoreColor(formatScore(a.score))}`}>
+                  <span className="font-mono text-sm font-bold">{formatScore(a.score)}</span>
+                </div>
+              )}
+              {a.matchScore != null && (
+                <div className="px-2 py-1 rounded-lg bg-purple-900/20 border border-purple-700/30">
+                  <span className="font-mono text-[10px] text-purple-300">{a.matchScore.toFixed(0)}%</span>
+                </div>
+              )}
+              {userProgress?.progress != null && (
+                <div className="px-2 py-1 rounded-lg bg-blue-900/20 border border-blue-700/30">
+                  <span className="font-mono text-[10px] text-blue-300">
+                    Ep {userProgress.progress}{episodesTotal ? `/${episodesTotal}` : ''}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Match reason */}
+          {a.matchReason && (
+            <p className="text-[11px] text-purple-400/70 font-mono mb-2 italic">"{a.matchReason}"</p>
+          )}
 
           {/* Badges */}
           {badges.length > 0 && (
@@ -87,19 +142,19 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
           )}
 
           {/* Genres */}
-          {genres.length > 0 && (
+          {genreNames.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {genres.slice(0, 5).map((g) => (
+              {genreNames.slice(0, 5).map((g) => (
                 <span key={g} className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-purple-900/30 text-purple-300 border border-purple-700/30">{g}</span>
               ))}
-              {genres.length > 5 && (
-                <span className="px-2 py-0.5 text-[10px] font-mono text-gray-500 border border-[#1e1e2e]">+{genres.length - 5}</span>
+              {genreNames.length > 5 && (
+                <span className="px-2 py-0.5 text-[10px] font-mono text-gray-500 border border-[#1e1e2e]">+{genreNames.length - 5}</span>
               )}
             </div>
           )}
 
           {/* Expand */}
-          {(synopsis || studios.length > 0 || tags.length > 0) && (
+          {(a.synopsis || studioNames.length > 0 || tagNames.length > 0) && (
             <button
               onClick={() => setExpanded(!expanded)}
               className="text-xs font-mono text-gray-500 hover:text-purple-400 transition-colors flex items-center gap-1 mb-2"
@@ -111,31 +166,82 @@ export default function AnimeCard({ anime, onDismiss, onAvoid }) {
           {/* Expanded */}
           {expanded && (
             <div className="space-y-2 mb-3 animate-fade-in">
-              {synopsis && <p className="text-xs text-gray-400 leading-relaxed line-clamp-4">{synopsis}</p>}
-              {studios.length > 0 && (
+              {a.synopsis && <p className="text-xs text-gray-400 leading-relaxed line-clamp-4">{a.synopsis}</p>}
+              {studioNames.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   <span className="text-[10px] font-mono text-gray-500 uppercase">Studios:</span>
-                  {studios.map((s) => <span key={s} className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-blue-900/20 text-blue-400 border border-blue-700/30">{s}</span>)}
+                  {studioNames.map((s) => <span key={s} className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-blue-900/20 text-blue-400 border border-blue-700/30">{s}</span>)}
                 </div>
               )}
-              {tags.length > 0 && (
+              {tagNames.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {tags.slice(0, 8).map((t) => <span key={t} className="px-1.5 py-0.5 text-[9px] font-mono text-gray-500 border border-[#1e1e2e]">#{t}</span>)}
+                  {tagNames.slice(0, 8).map((t) => <span key={t} className="px-1.5 py-0.5 text-[9px] font-mono text-gray-500 border border-[#1e1e2e]">#{t}</span>)}
                 </div>
               )}
             </div>
           )}
 
+          {/* Streaming badges */}
+          {streamingLinks.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {streamingLinks.slice(0, 5).map(l => (
+                <a
+                  key={l.site}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-green-900/20 text-green-400 border border-green-700/30 hover:bg-green-900/40 transition-all"
+                  title={`Watch on ${l.site}`}
+                >
+                  ▶ {l.site}
+                </a>
+              ))}
+              {streamingLinks.length > 5 && (
+                <span className="px-2 py-0.5 text-[10px] font-mono text-gray-500">+{streamingLinks.length - 5}</span>
+              )}
+              <a
+                href={`https://anilist.co/anime/${a.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-amber-900/20 text-amber-400 border border-amber-700/30 hover:bg-amber-900/40 transition-all"
+                title="View on AniList — MALSync shows 90+ streaming sites there"
+              >
+                ⊞ MALSync (90+)
+              </a>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 mt-auto pt-3 border-t border-[#1e1e2e]">
+            <a
+              href={`https://anilist.co/anime/${a.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all text-center"
+              title="View on AniList"
+            >
+              ▲ AniList
+              <span className="ml-1 text-[8px] opacity-60">MALSync</span>
+            </a>
+            {a.idMal && (
+              <a
+                href={`https://myanimelist.net/anime/${a.idMal}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all text-center"
+                title="View on MyAnimeList"
+              >
+                ● MAL
+              </a>
+            )}
             <button
-              onClick={() => onDismiss?.(id)}
+              onClick={() => onDismiss?.(a.id)}
               className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-pink-400 hover:border-pink-500/40 transition-all"
             >
               ✕ Dismiss
             </button>
             <button
-              onClick={() => onAvoid?.(id)}
+              onClick={() => genreNames.forEach(g => onAvoid?.(g))}
               className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
             >
               ⊘ Avoid

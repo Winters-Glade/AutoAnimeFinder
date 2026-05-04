@@ -40,6 +40,10 @@ export function getAutoRecs(payload) {
   return request('/api/recommendations/auto', { method: 'POST', body: JSON.stringify(payload) })
 }
 
+export function getSimilarRecs(payload) {
+  return request('/api/recommendations/similar', { method: 'POST', body: JSON.stringify(payload) })
+}
+
 export function getMoodRecs(payload) {
   return request('/api/recommendations/mood', { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -73,6 +77,8 @@ export default {
   fetchJikan,
   getAnimeDetail,
   fetchTasteProfile,
+  getAutoRecs,
+  getSimilarRecs,
   getMoodRecs,
   getDirectRecs,
   getFallbackRecs,

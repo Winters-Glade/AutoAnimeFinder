@@ -137,6 +137,20 @@ class Studio(BaseModel):
     isAnimationStudio: bool = True
 
 
+class ExternalLink(BaseModel):
+    """External link (streaming, social, info) for an anime."""
+    site: str
+    url: str
+    type: Optional[str] = None  # "STREAMING", "SOCIAL", "INFO"
+
+
+class StreamingEpisode(BaseModel):
+    """A streaming episode with title, URL, and site."""
+    title: Optional[str] = None
+    url: Optional[str] = None
+    site: Optional[str] = None
+
+
 class AnimeRelation(BaseModel):
     """Related anime entry."""
     id: int
@@ -161,6 +175,7 @@ class CoverImage(BaseModel):
 class Anime(BaseModel):
     """Full anime metadata model."""
     id: int
+    idMal: Optional[int] = None
     title: AnimeTitle
     genres: List[str] = Field(default_factory=list)
     tags: List[Tag] = Field(default_factory=list)
@@ -186,6 +201,8 @@ class Anime(BaseModel):
     nextAiringEpisode: Optional[NextAiringEpisode] = None
     relations: List[AnimeRelation] = Field(default_factory=list)
     recommendations: List[AnimeRecommendation] = Field(default_factory=list)
+    externalLinks: List[ExternalLink] = Field(default_factory=list)
+    streamingEpisodes: List[StreamingEpisode] = Field(default_factory=list)
 
 
 class UserAnime(BaseModel):
@@ -293,6 +310,7 @@ class MoodRecommendationRequest(BaseModel):
 
 class DirectRecommendationRequest(BaseModel):
     """Direct filter-based recommendation request (no AI mood)."""
+    username: Optional[str] = ""
     genres: List[str] = Field(default_factory=list)
     timeCommitment: Optional[TimeCommitment] = None
     brainPower: Optional[int] = Field(default=50, ge=1, le=100)

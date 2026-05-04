@@ -449,6 +449,49 @@ async def get_anime_details(anime_id: int):
     return anime
 
 
+# ── Catalog search ─────────────────────────────
+
+
+@app.get("/api/search")
+async def search_catalog(q: str = Query(..., description="Search query"), limit: int = Query(10, ge=1, le=50)):
+    """Search the anime catalog by title (romaji, english, native)."""
+    if not _anime_catalog:
+        # Try to populate from cache
+        logger.warning("Catalog empty during search — no cached data available")
+        return {"results": [], "total": 0}
+
+    query = q.lower().strip()
+    if not query:
+        return {"results": [], "total": 0}
+
+    results = []
+    seen_ids = set()
+    for anime in _anime_catalog.values():
+        titles_to_check = []
+        if anime.title.romaji:
+            titles_to_check.append(anime.title.romaji)
+        if anime.title.english:
+            titles_to_check.append(anime.title.english)
+        if anime.title.native:
+            titles_to_check.append(anime.title.native)
+
+        # Also check synonyms if available
+        if hasattr(anime, 'synonyms') and anime.synonyms:
+            titles_to_check.extend(anime.synonyms)
+
+        for title in titles_to_check:
+            if title and query in title.lower():
+                if anime.id not in seen_ids:
+                    results.append(anime)
+                    seen_ids.add(anime.id)
+                break
+
+        if len(results) >= limit:
+            break
+
+    return {"results": results, "total": len(results)}
+
+
 # ── Mood-based recommendations ─────────────────
 
 

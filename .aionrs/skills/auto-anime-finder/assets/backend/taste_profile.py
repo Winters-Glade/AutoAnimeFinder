@@ -115,7 +115,7 @@ class TasteProfileEngine:
         return status_weight * max(score_weight, 0.0)
 
     def _compute_genre_affinities(self) -> List[Tuple[str, float, int]]:
-        """Compute weighted genre affinities."""
+        """Compute weighted genre affinities, normalized to 0-100 scale."""
         scores: Dict[str, float] = defaultdict(float)
         counts: Dict[str, int] = Counter()
 
@@ -125,15 +125,25 @@ class TasteProfileEngine:
                 scores[genre] += weight
                 counts[genre] += 1
 
+        if not scores:
+            return []
+
+        # Normalize to percentage (highest = 100)
+        max_score = max(scores.values())
+        normalized = {
+            g: (s / max_score * 100.0) if max_score > 0 else 0.0
+            for g, s in scores.items()
+        }
+
         sorted_genres = sorted(
-            scores.items(),
+            normalized.items(),
             key=lambda x: x[1],
             reverse=True,
         )
-        return [(g, s, counts[g]) for g, s in sorted_genres]
+        return [(g, round(s, 1), counts[g]) for g, s in sorted_genres]
 
     def _compute_tag_affinities(self) -> List[Tuple[str, int, float, int]]:
-        """Compute weighted tag affinities."""
+        """Compute weighted tag affinities, normalized to 0-100 scale."""
         scores: Dict[int, float] = defaultdict(float)
         names: Dict[int, str] = {}
         counts: Dict[int, int] = Counter()
@@ -146,13 +156,23 @@ class TasteProfileEngine:
                 names[tag.id] = tag.name
                 counts[tag.id] += 1
 
+        if not scores:
+            return []
+
+        # Normalize to percentage (highest = 100)
+        max_score = max(scores.values())
+        normalized = {
+            tid: (s / max_score * 100.0) if max_score > 0 else 0.0
+            for tid, s in scores.items()
+        }
+
         sorted_tags = sorted(
-            scores.items(),
+            normalized.items(),
             key=lambda x: x[1],
             reverse=True,
         )
         return [
-            (names[tid], tid, score, counts[tid])
+            (names[tid], tid, round(score, 1), counts[tid])
             for tid, score in sorted_tags
         ]
 
