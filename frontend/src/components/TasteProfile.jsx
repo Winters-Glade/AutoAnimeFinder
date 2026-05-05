@@ -32,7 +32,7 @@ export default function TasteProfile({ profile, loading }) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-2">
-        <Stat label="Total Anime" value={profile.totalAnime ?? profile.total_anime} />
+        <Stat label="Completed" value={`${profile.completedAnime ?? 0}/${profile.totalAnime ?? profile.total_anime}`} />
         <Stat label="Avg Score" value={((profile.ratingPatterns ?? profile.ratings)?.averageScore ?? profile.average_score)?.toFixed(1)} />
         <Stat label="Binge Level" value={Math.round((profile.bingePotential?.bingeScore ?? profile.binge_potential ?? 0) * 100) + '%'} />
         <Stat label="Critic Type" value={(profile.ratingPatterns?.harshCritic ?? profile.is_harsh_critic) ? '😈 Harsh' : '😇 Generous'} />

@@ -80,6 +80,11 @@ class TasteProfileEngine:
         rating_patterns = self._compute_rating_patterns()
         binge_potential = self._compute_binge_potential()
 
+        completed_anime_count = sum(
+            1 for ua in self.anime_list
+            if ua.status == UserAnimeStatus.COMPLETED
+        )
+
         return TasteProfile(
             username=self.username,
             totalAnime=len(self.anime_list),
@@ -87,6 +92,7 @@ class TasteProfileEngine:
                 ua.anime.episodes or 0 for ua in self.anime_list
                 if ua.status == UserAnimeStatus.COMPLETED
             ),
+            completedAnime=completed_anime_count,
             topGenres=[
                 GenreAffinity(genre=g, score=s, count=c)
                 for g, s, c in genre_scores[:TOP_N_GENRES]

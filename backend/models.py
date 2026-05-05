@@ -268,6 +268,7 @@ class TasteProfile(BaseModel):
     username: str
     totalAnime: int = 0
     totalEpisodes: int = 0
+    completedAnime: int = 0
     topGenres: List[GenreAffinity] = Field(default_factory=list)
     topTags: List[TagAffinity] = Field(default_factory=list)
     topStudios: List[StudioAffinity] = Field(default_factory=list)
