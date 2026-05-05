@@ -327,7 +327,7 @@ async def fetch_jikan(request: JikanFetchRequest):
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
-    cache_key = f"jikan_user_{username}"
+    cache_key = f"mal_user_{username}"
     cached = _load_cache(cache_key, max_age_secs=300)
     if cached:
         logger.info("Returning cached Jikan data for %s", username)
@@ -755,7 +755,10 @@ async def get_auto_recommendations(request: dict = {}):
         raise HTTPException(status_code=500, detail=f"Recommendation error: {e}")
 
     # Enrich MAL-sourced recommendations with Jikan full details
-    recommendations = await _enrich_recommendations(recommendations)
+    try:
+        recommendations = await _enrich_recommendations(recommendations)
+    except Exception as e:
+        logger.warning("Enrichment failed for some recommendations: %s", e)
 
     return RecommendationResponse(
         recommendations=recommendations,
@@ -774,10 +777,13 @@ async def _enrich_recommendations(recommendations: List[Recommendation]):
     for rec in recommendations:
         # Only enrich if the entry is sparse (MAL direct data is sparse)
         if not rec.anime.synopsis and not rec.anime.studios:
-            enriched = await jikan.fetch_anime_detail(rec.anime.id)
-            if enriched:
-                rec.anime = enriched
-                enriched_count += 1
+            try:
+                enriched = await jikan.fetch_anime_detail(rec.anime.id)
+                if enriched:
+                    rec.anime = enriched
+                    enriched_count += 1
+            except Exception as e:
+                logger.debug("Failed to enrich anime %d: %s", rec.anime.id, e)
             # Small delay to respect Jikan rate limits
             await asyncio.sleep(0.1)
     if enriched_count:
@@ -815,7 +821,10 @@ async def get_similar_recommendations(request: dict = {}):
     )
 
     # Enrich MAL-sourced recommendations with Jikan full details
-    recommendations = await _enrich_recommendations(recommendations)
+    try:
+        recommendations = await _enrich_recommendations(recommendations)
+    except Exception as e:
+        logger.warning("Enrichment failed for some recommendations: %s", e)
 
     return RecommendationResponse(
         recommendations=recommendations,

@@ -59,7 +59,7 @@ export default function SimilarMode({ username, source, watchedIds, episodeMap,
     setError(null)
     setFetched(false)
     try {
-      const data = await getSimilarRecs({ seedIds: seeds.map(s => s.id), limit: 24 })
+      const data = await getSimilarRecs({ seedIds: seeds.map(s => s.id), limit: 24, source })
       setResults(data.recommendations || [])
       setFetched(true)
     } catch (e) {
