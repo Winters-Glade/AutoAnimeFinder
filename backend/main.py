@@ -520,7 +520,7 @@ async def get_mood_recommendations(request: MoodRecommendationRequest):
     # ── Auto-filter: merge watched anime into excludeList ──
     exclude_list = list(request.excludeList or [])
     if request.username:
-        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        watched = _get_watched_ids_from_cache(request.username, request.source)
         if watched:
             exclude_list = list(set(exclude_list) | watched)
             logger.debug(
@@ -572,7 +572,7 @@ async def get_direct_recommendations(request: DirectRecommendationRequest):
     # ── Auto-filter: merge watched anime into excludeList ──
     exclude_list = list(request.excludeList or [])
     if request.username:
-        watched = _get_watched_ids_from_cache(request.username, "anilist")
+        watched = _get_watched_ids_from_cache(request.username, request.source)
         if watched:
             exclude_list = list(set(exclude_list) | watched)
             logger.debug(

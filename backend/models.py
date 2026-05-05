@@ -301,6 +301,7 @@ class TasteProfileRequest(BaseModel):
 class MoodRecommendationRequest(BaseModel):
     """AI-powered mood-based recommendation request."""
     username: Optional[str] = ""
+    source: str = "anilist"  # "anilist" or "mal"
     moodQuery: str = ""
     brainPower: Optional[int] = Field(default=50, ge=1, le=100)
     timeCommitment: Optional[TimeCommitment] = None
@@ -312,6 +313,7 @@ class MoodRecommendationRequest(BaseModel):
 class DirectRecommendationRequest(BaseModel):
     """Direct filter-based recommendation request (no AI mood)."""
     username: Optional[str] = ""
+    source: str = "anilist"  # "anilist" or "mal"
     genres: List[str] = Field(default_factory=list)
     timeCommitment: Optional[TimeCommitment] = None
     brainPower: Optional[int] = Field(default=50, ge=1, le=100)
