@@ -69,9 +69,10 @@ export default function SimilarMode({ username, source, watchedIds, episodeMap,
     }
   }
 
-  // Similar mode recommends from the user's own catalog, so every result is already
-  // in their list. Don't filter by watchedIds — that would remove everything.
-  const filteredResults = results
+  // Filter out anime the user has already completed (but keep CURRENT, PLANNING, PAUSED, etc.)
+  const filteredResults = results.filter(
+    r => !(r.anime?.id && episodeMap?.[r.anime.id]?.status === 'COMPLETED')
+  )
 
   return (
     <div>
