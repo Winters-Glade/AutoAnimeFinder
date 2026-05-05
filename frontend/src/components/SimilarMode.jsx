@@ -69,9 +69,9 @@ export default function SimilarMode({ username, source, watchedIds, episodeMap,
     }
   }
 
-  const filteredResults = results.filter(
-    r => !(r.anime?.id && watchedIds?.has(r.anime.id))
-  )
+  // Similar mode recommends from the user's own catalog, so every result is already
+  // in their list. Don't filter by watchedIds — that would remove everything.
+  const filteredResults = results
 
   return (
     <div>
