@@ -199,6 +199,7 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
               {streamingLinks.length > 5 && (
                 <span className="px-2 py-0.5 text-[10px] font-mono text-gray-500">+{streamingLinks.length - 5}</span>
               )}
+              {a.idMal && (
               <a
                 href={`https://anilist.co/anime/${a.id}`}
                 target="_blank"
@@ -208,31 +209,33 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
               >
                 ⊞ MALSync (90+)
               </a>
+              )}
             </div>
           )}
 
           {/* Actions */}
           <div className="flex items-center justify-center gap-2 mt-auto pt-3 border-t border-[#1e1e2e] flex-wrap">
-            <a
-              href={`https://anilist.co/anime/${a.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all whitespace-nowrap"
-              title="View on AniList"
-            >
-              ▲ AniList
-              <span className="ml-1 text-[8px] opacity-60">MALSync</span>
-            </a>
             {a.idMal && (
               <a
-                href={`https://myanimelist.net/anime/${a.idMal}`}
+                href={`https://anilist.co/anime/${a.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all whitespace-nowrap"
-                title="View on MyAnimeList"
+                className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/40 transition-all whitespace-nowrap"
+                title="View on AniList"
               >
-                ● MAL
+                ▲ AniList
+                <span className="ml-1 text-[8px] opacity-60">MALSync</span>
               </a>
+            )}
+            <a
+              href={`https://myanimelist.net/anime/${a.idMal || a.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-orange-400 hover:border-orange-500/40 transition-all whitespace-nowrap"
+              title="View on MyAnimeList"
+            >
+              ● MAL
+            </a>
             )}
             <button
               onClick={() => onDismiss?.(a.id)}
