@@ -108,7 +108,7 @@ export default function AutoMode({ username, source, onRecommend, onDismiss, onA
           <div className="text-5xl mb-4">🎯</div>
           <h3 className="text-xl font-semibold text-gray-300 mb-2">No recommendations yet</h3>
           <p className="text-gray-500 text-sm">
-            Import your AniList above to get personalized auto-recommendations!
+            Import your anime list above to get personalized auto-recommendations!
           </p>
         </div>
       )}
@@ -116,12 +116,31 @@ export default function AutoMode({ username, source, onRecommend, onDismiss, onA
       {/* Results grid */}
       {!isLoading && filteredResults.length > 0 && (
         <div>
-          <h3 className="text-lg neon-text mb-4 flex items-center gap-2">
-            ✨ Picks for You
-            <span className="text-sm text-gray-400 font-normal">
-              ({filteredResults.length} matches)
-            </span>
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg neon-text flex items-center gap-2">
+              ✨ Picks for You
+              <span className="text-sm text-gray-400 font-normal">
+                ({filteredResults.length} matches)
+              </span>
+            </h3>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                  const search = {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    label: 'Auto Mode',
+                    timestamp: Date.now(),
+                    params: { mode: 'auto' },
+                  }
+                  window.dispatchEvent(new CustomEvent('saveSearch', { detail: search }))
+                }
+              }}
+              className="text-xs px-3 py-1.5 rounded bg-gray-700/50 text-gray-400 hover:bg-purple-600/30 hover:text-purple-300 transition-all"
+              title="Save this search"
+            >
+              💾 Save Search
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filteredResults.map((item) => {
               const anime = item.anime ?? item

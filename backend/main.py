@@ -704,7 +704,6 @@ async def get_auto_recommendations(request: dict = {}):
     source = request.get("source", "anilist")
     seed_count = request.get("seedCount", 5)
     limit = request.get("limit", 20)
-    limit = request.get("limit", 20)
 
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")

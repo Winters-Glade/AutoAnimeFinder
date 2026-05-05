@@ -12,7 +12,9 @@ import { fetchAnilist, fetchJikan, fetchTasteProfile, getAutoRecs, getSimilarRec
 
 export default function HomePage() {
   const [username, setUsername] = useState('')
-  const [source, setSource] = useState('anilist')
+  const [source, setSource] = useState(() => {
+    try { return localStorage.getItem('anilist_source') || 'anilist' } catch { return 'anilist' }
+  })
   const [activeTab, setActiveTab] = useState('auto')
   const [tasteProfile, setTasteProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -195,7 +197,7 @@ export default function HomePage() {
           <select
             className="cyber-input px-3 py-2 text-sm bg-gray-900"
             value={source}
-            onChange={(e) => setSource(e.target.value)}
+            onChange={(e) => { setSource(e.target.value); try { localStorage.setItem('anilist_source', e.target.value) } catch {} }}
           >
             <option value="anilist">AniList</option>
             <option value="mal">MyAnimeList</option>
