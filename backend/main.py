@@ -697,10 +697,12 @@ async def get_auto_recommendations(request: dict = {}):
     - username (str): the user to get recommendations for
     - source (str, optional): 'anilist' (default) or 'mal'
     - seedCount (int, optional): number of recent high-rated anime to use (default 5)
+    - limit (int, optional): max recommendations to return (default 20)
     """
     username = request.get("username", "")
     source = request.get("source", "anilist")
     seed_count = request.get("seedCount", 5)
+    limit = request.get("limit", 20)
     limit = request.get("limit", 20)
 
     if not username:
