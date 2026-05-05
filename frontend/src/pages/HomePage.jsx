@@ -8,8 +8,7 @@ import TasteProfile from '../components/TasteProfile'
 import SearchHistory from '../components/SearchHistory'
 import AnimeCard from '../components/AnimeCard'
 import NeuralLoader from '../components/NeuralLoader'
-import { fetchAnilist, fetchJikan, fetchTasteProfile, getAutoRecs, getSimilarRecs, getMoodRecs, getDirectRecs,
-         getSearchHistory, saveSearchHistory } from '../api/client'
+import { fetchAnilist, fetchJikan, fetchTasteProfile, getAutoRecs, getSimilarRecs, getMoodRecs, getDirectRecs } from '../api/client'
 
 export default function HomePage() {
   const [username, setUsername] = useState('')
@@ -20,14 +19,12 @@ export default function HomePage() {
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [history, setHistory] = useState([])
   const [avoidList, setAvoidList] = useState([])
   const [dismissedIds, setDismissedIds] = useState(new Set())
   const [watchedIds, setWatchedIds] = useState(new Set()) // anime the user has already seen
   const [episodeMap, setEpisodeMap] = useState({}) // { [animeId]: { progress, status } }
   const [showMalsyncPrompt, setShowMalsyncPrompt] = useState(true) // MALSync promotion
 
-  useEffect(() => { loadHistory() }, [])
 
   // Best-effort MALSync detection (may not work in all browsers)
   useEffect(() => {
@@ -111,8 +108,6 @@ export default function HomePage() {
       const results = data?.recommendations ?? data ?? []
       if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
-      await saveSearchHistory({ query: filters.moodQuery || '(mood)', type: 'mood', filters })
-      loadHistory()
     } catch (e) {
       setError(e.message || 'Failed to get recommendations')
     } finally {
@@ -128,8 +123,6 @@ export default function HomePage() {
       const results = data?.recommendations ?? data ?? []
       if (!Array.isArray(results)) return setError('Invalid response from server')
       setRecommendations(results.filter(r => !dismissedIds.has(r.id)))
-      await saveSearchHistory({ query: `Direct: ${(filters.genres || []).join(', ')}`, type: 'direct', filters })
-      loadHistory()
     } catch (e) {
       setError(e.message || 'Failed to get recommendations')
     } finally {
@@ -149,17 +142,12 @@ export default function HomePage() {
     if (!avoidList.includes(genre)) setAvoidList(prev => [...prev, genre])
   }
 
-  const loadHistory = async () => {
-    try {
-      const h = await getSearchHistory()
-      setHistory(Array.isArray(h) ? h : [])
-    } catch { /* ignore */ }
-  }
-
   const handleLoadSearch = (search) => {
-    if (!search) return
-    if (search.type === 'mood' && search.filters) handleMoodRec(search.filters)
-    else if (search.type === 'direct' && search.filters) handleDirectRec(search.filters)
+    if (!search || !search.params) return
+    const p = search.params
+    if (p.mode === 'mood') handleMoodRec(p)
+    else if (p.mode === 'direct') handleDirectRec(p)
+    else if (p.mode === 'similar') {/* handled by SimilarMode internally */}
   }
 
   const filteredResults = Array.isArray(recommendations) ? recommendations.filter(r => !dismissedIds.has(r.id)) : []

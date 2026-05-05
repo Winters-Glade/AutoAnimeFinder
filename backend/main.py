@@ -16,6 +16,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -754,11 +755,35 @@ async def get_auto_recommendations(request: dict = {}):
         logger.error("Auto recommendation failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Recommendation error: {e}")
 
+    # Enrich MAL-sourced recommendations with Jikan full details
+    recommendations = await _enrich_recommendations(recommendations)
+
     return RecommendationResponse(
         recommendations=recommendations,
         source="auto",
         totalMatches=len(recommendations),
     )
+
+
+# ── Enrichment helper for MAL-sourced data ──────
+
+
+async def _enrich_recommendations(recommendations: List[Recommendation]):
+    """Enrich sparse recommendation entries with full Jikan anime details."""
+    jikan = get_jikan_client()
+    enriched_count = 0
+    for rec in recommendations:
+        # Only enrich if the entry is sparse (MAL direct data is sparse)
+        if not rec.anime.synopsis and not rec.anime.studios:
+            enriched = await jikan.fetch_anime_detail(rec.anime.id)
+            if enriched:
+                rec.anime = enriched
+                enriched_count += 1
+            # Small delay to respect Jikan rate limits
+            await asyncio.sleep(0.1)
+    if enriched_count:
+        logger.info("Enriched %d/%d recommendations with Jikan details", enriched_count, len(recommendations))
+    return recommendations
 
 
 # ── Similar Recommendations (If You Liked...) ──────
@@ -789,6 +814,9 @@ async def get_similar_recommendations(request: dict = {}):
         seed_ids=found_ids,
         limit=limit,
     )
+
+    # Enrich MAL-sourced recommendations with Jikan full details
+    recommendations = await _enrich_recommendations(recommendations)
 
     return RecommendationResponse(
         recommendations=recommendations,
