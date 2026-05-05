@@ -299,9 +299,71 @@ class JikanClient:
     # Parsing helpers
     # ──────────────────────────────────────────────
 
+    @staticmethod
+    def _normalize_status(status: Optional[str]) -> Optional[str]:
+        """Convert Jikan/MAL airing status to AnimeStatus enum value."""
+        if not status:
+            return None
+        upper = status.upper().replace(" ", "_")
+        STATUS_MAP = {
+            "CURRENTLY_AIRING": "RELEASING",
+            "FINISHED_AIRING": "FINISHED",
+            "FINISHED": "FINISHED",
+            "NOT_YET_AIRED": "NOT_YET_RELEASED",
+            "NOT_YET_RELEASED": "NOT_YET_RELEASED",
+            "CANCELLED": "CANCELLED",
+            "HIATUS": "HIATUS",
+        }
+        return STATUS_MAP.get(upper, upper)
+
+    @staticmethod
+    def _parse_jikan_duration(duration: Any) -> Optional[int]:
+        """Parse Jikan duration string like '24 min per ep' to minutes."""
+        if duration is None:
+            return None
+        if isinstance(duration, (int, float)):
+            return int(duration)
+        if isinstance(duration, str):
+            import re
+            match = re.search(r'(\d+)', duration)
+            if match:
+                return int(match.group(1))
+        return None
+
+    @staticmethod
+    def _parse_jikan_score(score: Any) -> Optional[int]:
+        """Convert Jikan score (0-10 float) to 0-100 int for Anime model."""
+        if score is None:
+            return None
+        try:
+            s = float(score)
+            if s <= 10:
+                return int(s * 10)
+            return int(s)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _parse_jikan_date(date_val: Any) -> Optional[dict]:
+        """Parse Jikan date string like '2019-01-11T00:00:00+00:00' to FuzzyDate dict."""
+        if not date_val:
+            return None
+        if isinstance(date_val, dict):
+            return date_val
+        if isinstance(date_val, str):
+            import re
+            match = re.search(r'(\d{4})-(\d{2})-(\d{2})', date_val)
+            if match:
+                return {
+                    "year": int(match.group(1)),
+                    "month": int(match.group(2)),
+                    "day": int(match.group(3)),
+                }
+        return None
+
     def _parse_entry(self, entry: Dict) -> Optional[UserAnime]:
         """Parse a Jikan anime list entry into UserAnime."""
-        anime_data = entry.get("anime", entry)  # Jikan v4 uses direct fields
+        anime_data = entry.get("anime", entry)  # Jikan v4 uses nested "anime" object
         raw_score = entry.get("score", 0) or 0
         # MAL scores are 0-10, normalize to 0-100
         if raw_score <= 10:
@@ -309,7 +371,7 @@ class JikanClient:
         else:
             normalized_score = raw_score
         return UserAnime(
-            anime=self._parse_anime(entry),
+            anime=self._parse_anime(anime_data),
             score=normalized_score,
             progress=entry.get("episodes_watched", 0),
             status=self._parse_status(entry.get("watching_status")),
@@ -361,21 +423,21 @@ class JikanClient:
             demographics=demographics,
             season=season,
             seasonYear=data.get("year"),
-            status=data.get("status", "").upper().replace(" ", "_") if data.get("status") else None,
+            status=self._normalize_status(data.get("status")),
             episodes=data.get("episodes"),
-            duration=data.get("duration"),
+            duration=self._parse_jikan_duration(data.get("duration")),
             format=data.get("type", "").upper(),
             source=data.get("source", "").upper().replace(" ", "_"),
             synonyms=data.get("title_synonyms", []),
-            meanScore=data.get("score"),
-            averageScore=data.get("score"),
+            meanScore=self._parse_jikan_score(data.get("score")),
+            averageScore=self._parse_jikan_score(data.get("score")),
             popularity=data.get("popularity"),
             synopsis=data.get("synopsis"),
             description=data.get("synopsis"),
             coverImage={"large": data.get("images", {}).get("jpg", {}).get("large_image_url")},
             bannerImage=data.get("images", {}).get("jpg", {}).get("large_image_url"),
-            startDate=data.get("aired", {}).get("from"),
-            endDate=data.get("aired", {}).get("to"),
+            startDate=self._parse_jikan_date(data.get("aired", {}).get("from")),
+            endDate=self._parse_jikan_date(data.get("aired", {}).get("to")),
             nextAiringEpisode=None,
             relations=[],
             recommendations=[],
