@@ -236,7 +236,6 @@ export default function AnimeCard({ anime, onDismiss, onAvoid, userProgress }) {
             >
               ● MAL
             </a>
-            )}
             <button
               onClick={() => onDismiss?.(a.id)}
               className="px-3 py-1.5 text-xs font-mono rounded-lg border border-[#1e1e2e] text-gray-500 hover:text-pink-400 hover:border-pink-500/40 transition-all whitespace-nowrap"
