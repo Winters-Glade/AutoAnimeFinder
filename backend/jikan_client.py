@@ -138,13 +138,26 @@ class JikanClient:
 
             response = await self._client.get(url)
             if response.status_code != 200:
-                logger.error("MAL direct fetch failed: HTTP %d", response.status_code)
-                response.raise_for_status()
+                logger.error("MAL direct fetch failed: HTTP %d for user %s",
+                             response.status_code, username)
+                raise httpx.HTTPStatusError(
+                    f"User '{username}' not found on MyAnimeList",
+                    request=response.request,
+                    response=httpx.Response(status_code=404, request=response.request),
+                )
 
-            raw_entries = response.json()
-            if not isinstance(raw_entries, list):
-                logger.error("MAL direct fetch: unexpected response format")
-                raise ValueError("Unexpected response format from MAL direct endpoint")
+            try:
+                raw_entries = response.json()
+                if not isinstance(raw_entries, list):
+                    raise ValueError("Unexpected response format")
+            except Exception:
+                logger.error("MAL direct fetch: invalid/non-JSON response for user %s",
+                             username)
+                raise httpx.HTTPStatusError(
+                    f"User '{username}' not found on MyAnimeList",
+                    request=response.request,
+                    response=httpx.Response(status_code=404, request=response.request),
+                )
 
             if not raw_entries:
                 break  # No more entries

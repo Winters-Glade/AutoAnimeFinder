@@ -270,12 +270,35 @@ class AnilistClient:
                     await asyncio.sleep(wait)
                     continue
 
-                response.raise_for_status()
-                data = response.json()
+                # Parse JSON body *before* raise_for_status() so we can detect
+                # GraphQL errors ("User not found", etc.) even on non-2xx
+                # HTTP status (AniList sometimes returns 500 with error JSON).
+                data = None
+                try:
+                    data = response.json()
+                except Exception:
+                    pass
 
-                if "errors" in data:
+                if data and isinstance(data, dict) and "errors" in data:
                     error_msg = data["errors"][0].get("message", "Unknown AniList error")
-                    raise Exception(f"AniList API error: {error_msg}")
+                    # Detect "not found" errors and raise as 404 so main.py's
+                    # handler returns a friendly user-not-found message.
+                    if "not found" in error_msg.lower():
+                        req = httpx.Request("POST", self.base_url)
+                        rsp = httpx.Response(status_code=404, request=req)
+                        raise httpx.HTTPStatusError(
+                            f"AniList API error: {error_msg}",
+                            request=req,
+                            response=rsp,
+                        )
+                    raise Exception(error_msg)
+
+                # Check HTTP status for non-GraphQL errors
+                response.raise_for_status()
+
+                # Parse JSON if we haven't already
+                if data is None or "data" not in data:
+                    data = response.json()
 
                 # Cache the successful response
                 result = data["data"]
