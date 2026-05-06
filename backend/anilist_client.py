@@ -283,7 +283,7 @@ class AnilistClient:
                     error_msg = data["errors"][0].get("message", "Unknown AniList error")
                     # Detect "not found" errors and raise as 404 so main.py's
                     # handler returns a friendly user-not-found message.
-                    if "not found" in error_msg.lower():
+                    if "not found" in error_msg.lower() or "internal server error" in error_msg.lower():
                         req = httpx.Request("POST", self.base_url)
                         rsp = httpx.Response(status_code=404, request=req)
                         raise httpx.HTTPStatusError(
